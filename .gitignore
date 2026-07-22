@@ -8,3 +8,5 @@ coverage/
 !.env.example
 *.tsbuildinfo
 *.log
+urpilot-technical-documentation.md
+UrPilot Doc.pdf

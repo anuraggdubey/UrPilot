@@ -1,0 +1,21 @@
+{
+  "name": "urpilot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Voice-controlled browsing assistant workspace.",
+  "workspaces": [
+    "extension",
+    "backend"
+  ],
+  "scripts": {
+    "dev:extension": "npm --workspace extension run dev",
+    "dev:backend": "npm --workspace backend run dev",
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces",
+    "test": "npm run test --workspaces"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  }
+}

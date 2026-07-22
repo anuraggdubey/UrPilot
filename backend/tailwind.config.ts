@@ -1,7 +1,11 @@
 import type { Config } from 'tailwindcss';
 
 export default {
-  content: ['./src/**/*.{ts,tsx,html}'],
+  content: [
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx,mdx}',
+    './lib/**/*.{js,ts,jsx,tsx,mdx}',
+  ],
   theme: {
     extend: {
       colors: {
@@ -18,19 +22,19 @@ export default {
         line: 'rgba(23, 22, 15, 0.12)',
         'line-strong': '#17160F',
       },
-      borderRadius: {
-        DEFAULT: '0px',
-      },
       fontFamily: {
-        display: ['"Archivo Expanded"', 'ui-sans-serif', 'sans-serif'],
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['"Plus Jakarta Sans"', 'Inter', 'ui-sans-serif', 'sans-serif'],
+        sans: ['"Plus Jakarta Sans"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         mono: ['"IBM Plex Mono"', 'monospace'],
       },
       boxShadow: {
-        flat: '2px 2px 0 0 #17160F',
+        flat: '3px 3px 0 0 #17160F',
+        'flat-lg': '5px 5px 0 0 #17160F',
+      },
+      borderRadius: {
+        DEFAULT: '0px',
       },
     },
   },
   plugins: [],
 } satisfies Config;
-

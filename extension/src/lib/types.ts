@@ -9,16 +9,34 @@ export type SiteTemplate = {
   id: string;
   site: string;
   urlTemplate: string;
+  isDefault?: boolean;
 };
+
+export type ActiveStep = 'search' | 'navigate' | 'summarize' | null;
 
 export type PanelPayload = {
   summary?: string;
   spokenSummary?: string;
   keyPoints?: string[];
   transcript?: string;
+  interimTranscript?: string;
+  sourceUrl?: string;
+  sourceTitle?: string;
   status: string;
   listening?: boolean;
+  speaking?: boolean;
+  processing?: boolean;
+  activeStep?: ActiveStep;
   error?: string;
+  micPermissionDenied?: boolean;
+};
+
+export type UserPreferences = {
+  autoRestartOnSilence: boolean;
+  autoReadSummaries: boolean;
+  playbackSpeed: 1.0 | 1.25 | 1.5;
+  activeModel: string;
+  pushToTalkShortcut: string;
 };
 
 export type PageContent = {
@@ -67,3 +85,4 @@ export type SummaryResponse = {
   spokenSummary: string;
   keyPoints: string[];
 };
+

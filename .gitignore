@@ -8,5 +8,11 @@ coverage/
 !.env.example
 *.tsbuildinfo
 *.log
+
+# Technical & UI UX Documentation Files
+urpilot-ui-ux-documentation.md
 urpilot-technical-documentation.md
 UrPilot Doc.pdf
+*ui-ux-documentation*
+*ui-ux*
+docs/

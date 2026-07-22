@@ -1,16 +1,21 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Expanded:wght@600;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  color: #172026;
-  background: #f7f8f5;
+  color: #17160F;
+  background-color: #F5F0E6;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 body {
   margin: 0;
-  min-width: 360px;
+  padding: 0;
+  min-width: 352px;
+  background-color: #F5F0E6;
+  color: #17160F;
 }
 
 button,
@@ -19,3 +24,32 @@ select,
 textarea {
   font: inherit;
 }
+
+/* Custom scrollbars matching flat aesthetic */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F5F0E6;
+}
+::-webkit-scrollbar-thumb {
+  background: #17160F;
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(193, 69, 43, 0.6);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgba(193, 69, 43, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(193, 69, 43, 0);
+  }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+

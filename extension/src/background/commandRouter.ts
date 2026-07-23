@@ -1,6 +1,26 @@
 import type { CommandIntent, SiteTemplate } from '../lib/types';
 import { findTemplate } from '../lib/siteTemplates';
 
+const POPULAR_APPS: Record<string, { label: string; url: string }> = {
+  whatsapp: { label: 'WhatsApp Web', url: 'https://web.whatsapp.com' },
+  'whatsapp web': { label: 'WhatsApp Web', url: 'https://web.whatsapp.com' },
+  youtube: { label: 'YouTube', url: 'https://www.youtube.com' },
+  github: { label: 'GitHub', url: 'https://github.com' },
+  gmail: { label: 'Gmail', url: 'https://mail.google.com' },
+  chatgpt: { label: 'ChatGPT', url: 'https://chatgpt.com' },
+  google: { label: 'Google Search', url: 'https://www.google.com' },
+  twitter: { label: 'X (Twitter)', url: 'https://x.com' },
+  x: { label: 'X', url: 'https://x.com' },
+  reddit: { label: 'Reddit', url: 'https://www.reddit.com' },
+  instagram: { label: 'Instagram', url: 'https://www.instagram.com' },
+  facebook: { label: 'Facebook', url: 'https://www.facebook.com' },
+  linkedin: { label: 'LinkedIn', url: 'https://www.linkedin.com' },
+  netflix: { label: 'Netflix', url: 'https://www.netflix.com' },
+  spotify: { label: 'Spotify', url: 'https://open.spotify.com' },
+  amazon: { label: 'Amazon', url: 'https://www.amazon.com' },
+  wikipedia: { label: 'Wikipedia', url: 'https://www.wikipedia.org' }
+};
+
 export function parseCommand(transcript: string, templates: SiteTemplate[]): CommandIntent {
   const text = transcript.trim().replace(/\s+/g, ' ');
   const lower = text.toLowerCase();
@@ -11,6 +31,20 @@ export function parseCommand(transcript: string, templates: SiteTemplate[]): Com
 
   if (/^(open my stuff|open my requirements|open my links)\b/.test(lower)) {
     return { intent: 'OPEN_SAVED_LINKS' };
+  }
+
+  // Direct app launcher matching (e.g., "open whatsapp", "whatsapp", "open youtube")
+  const openAppMatch = lower.match(/^(?:open\s+|go to\s+)?([a-z0-9\s.]+?)$/);
+  const targetKey = openAppMatch?.[1]?.trim();
+  if (targetKey && POPULAR_APPS[targetKey]) {
+    const app = POPULAR_APPS[targetKey];
+    return { intent: 'OPEN_DIRECT_URL', label: app.label, url: app.url };
+  }
+
+  // Direct domain URL (e.g. "open github.com")
+  const domainMatch = lower.match(/^(?:open\s+|go to\s+)?([a-z0-9-]+\.(?:com|org|io|net|dev|ai|app))$/);
+  if (domainMatch?.[1]) {
+    return { intent: 'OPEN_DIRECT_URL', label: domainMatch[1], url: `https://${domainMatch[1]}` };
   }
 
   if (/^(summari[sz]e|read|explain)( this page| this)?$/.test(lower)) {

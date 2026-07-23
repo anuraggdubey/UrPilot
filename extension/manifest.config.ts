@@ -25,10 +25,18 @@ export default defineManifest({
     'tts'
   ],
   host_permissions: [
+    '<all_urls>',
     'http://localhost:3001/*',
     'https://*.vercel.app/*'
   ],
   commands: {
+    '_execute_action': {
+      suggested_key: {
+        default: 'Ctrl+Shift+Y',
+        mac: 'Command+Shift+Y'
+      },
+      description: 'Open UrPilot Side Panel'
+    },
     'toggle-listening': {
       suggested_key: {
         default: 'Ctrl+Shift+L',

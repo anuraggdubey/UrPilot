@@ -135,9 +135,15 @@ function SidePanel() {
             <h2 className="font-display text-sm font-bold text-[#17160F]">
               {panel.status || 'Ready when you are.'}
             </h2>
-            <p className="font-sans text-xs italic text-slate-500">
-              {panel.listening ? 'Listening... speak now' : '"summarize this page..."'}
-            </p>
+            {panel.error ? (
+              <p className="font-sans text-xs text-red-600 font-medium max-w-xs mx-auto px-2">
+                {panel.error}
+              </p>
+            ) : (
+              <p className="font-sans text-xs italic text-slate-500">
+                {panel.listening ? 'Listening... speak now' : '"summarize this page..."'}
+              </p>
+            )}
           </div>
 
           {panel.listening && (

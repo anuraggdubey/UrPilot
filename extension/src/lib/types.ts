@@ -60,10 +60,12 @@ export type ExtensionMessage =
 
 export type CommandIntent =
   | { intent: 'OPEN_SAVED_LINKS' }
+  | { intent: 'OPEN_DIRECT_URL'; label: string; url: string }
   | { intent: 'SITE_SEARCH'; site: string; query: string }
   | { intent: 'WEB_SEARCH'; query: string }
   | { intent: 'WEB_SEARCH_THEN_SUMMARIZE'; query: string }
   | { intent: 'SUMMARIZE_PAGE' }
+  | { intent: 'ASK_PAGE_QUESTION'; question: string }
   | { intent: 'STOP' }
   | { intent: 'UNKNOWN'; transcript: string };
 
@@ -84,5 +86,10 @@ export type SummaryResponse = {
   summary: string;
   spokenSummary: string;
   keyPoints: string[];
+};
+
+export type AskPageResponse = {
+  answer: string;
+  spokenAnswer: string;
 };
 

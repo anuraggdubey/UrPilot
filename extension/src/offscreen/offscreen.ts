@@ -4,6 +4,7 @@ type SpeechRecognitionConstructor = new () => SpeechRecognition;
 
 let recognition: SpeechRecognition | undefined;
 let shouldListen = false;
+let isRecognizing = false;
 
 chrome.runtime.onMessage.addListener((message: ExtensionMessage) => {
   if (message.type === 'START_LISTENING') {
@@ -54,12 +55,19 @@ function startRecognition() {
     };
 
     recognition.onend = () => {
+      isRecognizing = false;
       if (shouldListen) {
-        recognition?.start();
+        try {
+          isRecognizing = true;
+          recognition?.start();
+        } catch {
+          isRecognizing = false;
+        }
       }
     };
 
     recognition.onerror = (event) => {
+      isRecognizing = false;
       chrome.runtime.sendMessage({
         type: 'PANEL_UPDATE',
         payload: { status: `Speech recognition error: ${event.error}`, listening: shouldListen }
@@ -67,10 +75,22 @@ function startRecognition() {
     };
   }
 
-  recognition.start();
+  if (!isRecognizing) {
+    try {
+      isRecognizing = true;
+      recognition.start();
+    } catch {
+      isRecognizing = false;
+    }
+  }
 }
 
 function stopRecognition() {
   shouldListen = false;
-  recognition?.stop();
+  isRecognizing = false;
+  try {
+    recognition?.stop();
+  } catch {
+    // Already stopped
+  }
 }

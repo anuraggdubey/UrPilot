@@ -6,8 +6,8 @@ import { z } from 'zod';
 
 const bodySchema = z.object({
   url: z.string().url(),
-  title: z.string().trim().min(1).max(300),
-  text: z.string().trim().min(50),
+  title: z.string().trim().default('Untitled Page'),
+  text: z.string().trim().default(''),
   mode: z.enum(['summary', 'steps']).default('summary')
 });
 
@@ -24,6 +24,15 @@ export function OPTIONS(req: Request) {
 export async function POST(req: Request) {
   try {
     const { url, title, text, mode } = bodySchema.parse(await req.json());
+
+    if (text.length < 20) {
+      return jsonResponse(req, {
+        summary: 'This page does not contain sufficient text to summarize.',
+        spokenSummary: 'This page does not have enough text content to summarize.',
+        keyPoints: ['Sparse content', 'Try summarizing an article or documentation page']
+      });
+    }
+
     const result = await callLLM<unknown>({
       system: summarizeSystemPrompt(mode),
       user: `Title: ${title}\nURL: ${url}\n\n${text.slice(0, 10000)}`

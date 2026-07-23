@@ -11,14 +11,22 @@ const bodySchema = z.object({
 const intentSchema = z.object({
   intent: z.enum([
     'OPEN_SAVED_LINKS',
+    'OPEN_DIRECT_URL',
     'SITE_SEARCH',
     'WEB_SEARCH',
     'WEB_SEARCH_THEN_SUMMARIZE',
     'SUMMARIZE_PAGE',
+    'ASK_PAGE_QUESTION',
     'STOP',
     'UNKNOWN'
   ]),
-  params: z.record(z.unknown()).default({})
+  params: z.object({
+    query: z.string().optional(),
+    site: z.string().optional(),
+    label: z.string().optional(),
+    url: z.string().optional(),
+    question: z.string().optional()
+  }).default({})
 });
 
 export function OPTIONS(req: Request) {
@@ -29,7 +37,7 @@ export async function POST(req: Request) {
   try {
     const { transcript } = bodySchema.parse(await req.json());
     const result = await callLLM<unknown>({
-      model: 'llama-3.1-8b-instant',
+      model: 'llama-3.3-70b-versatile',
       system: parseIntentSystemPrompt,
       user: transcript
     });

@@ -27,7 +27,8 @@ export default defineManifest({
     'sessions',
     'alarms',
     'notifications',
-    'downloads'
+    'downloads',
+    'clipboardWrite'
   ],
   host_permissions: [
     '<all_urls>',

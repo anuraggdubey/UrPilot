@@ -1,6 +1,6 @@
 import type { ExtensionMessage, PanelPayload } from '../lib/types';
 
-export function broadcastPanelUpdate(payload: PanelPayload) {
+export function broadcastPanelUpdate(payload: Partial<PanelPayload>) {
   chrome.runtime.sendMessage({ type: 'PANEL_UPDATE', payload } satisfies ExtensionMessage).catch(() => {
     // The side panel may be closed; command execution should continue.
   });

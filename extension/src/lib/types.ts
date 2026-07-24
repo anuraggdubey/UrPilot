@@ -57,7 +57,7 @@ export type ExtensionMessage =
   | { type: 'EXTRACT_CONTENT' }
   | { type: 'PAGE_CONTENT'; title: string; text: string; url: string }
   | { type: 'ROUTE_COMMAND'; transcript: string }
-  | { type: 'PANEL_UPDATE'; payload: PanelPayload }
+  | { type: 'PANEL_UPDATE'; payload: Partial<PanelPayload> }
   | { type: 'SPEAK'; text: string }
   | { type: 'STOP_SPEAKING' };
 
@@ -69,6 +69,7 @@ export type CommandIntent =
   | { intent: 'WEB_SEARCH_THEN_SUMMARIZE'; query: string }
   | { intent: 'SUMMARIZE_PAGE' }
   | { intent: 'ASK_PAGE_QUESTION'; question: string }
+  | { intent: 'NEW_TAB' }
   | { intent: 'CLOSE_ACTIVE_TAB' }
   | { intent: 'CLOSE_OTHER_TABS' }
   | { intent: 'CLOSE_DUPLICATE_TABS' }

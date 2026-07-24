@@ -21,9 +21,26 @@ const POPULAR_APPS: Record<string, { label: string; url: string }> = {
   wikipedia: { label: 'Wikipedia', url: 'https://www.wikipedia.org' }
 };
 
+function normalizeTranscript(raw: string): string {
+  let cleaned = raw.trim().replace(/[?.!,;:]+$/g, '').toLowerCase().replace(/\s+/g, ' ');
+
+  // STT Homophone fixes for "pause video" / "pause media"
+  cleaned = cleaned.replace(/\b(porn|pose|post|plus|press|cause|pass|paas|paws|paus)\s+(video|media|audio|playback|song|movie)\b/gi, 'pause $2');
+  cleaned = cleaned.replace(/\b(porn|pose|post|plus|press|cause|pass|paas|paws)\b/gi, (m) => (raw.toLowerCase().includes('video') || raw.toLowerCase().includes('media') ? 'pause' : m));
+
+  // STT Homophone fixes for "github"
+  // Common STT mishearings: "get her", "the gift", "git hub", "gitter", "get hub", "git up"
+  const githubHomophones = /\b(the gift|git hub|git thub|get hub|give hub|git-hub|get her|gitter|git up|get up|git huh|get huh|get heard)\b/gi;
+  cleaned = cleaned.replace(githubHomophones, 'github');
+
+  // Full-phrase fixes for common "go to / switch to / open" + github mishearings
+  cleaned = cleaned.replace(/\b(go to|switch to|open|move to|jump to)\s+(the gift|get her|gitter|git up|get up)\b/gi, '$1 github');
+
+  return cleaned;
+}
+
 export function parseCommand(transcript: string, templates: SiteTemplate[]): CommandIntent {
-  const text = transcript.trim().replace(/[?.!,;:]+$/g, '').replace(/\s+/g, ' ');
-  const lower = text.toLowerCase();
+  const lower = normalizeTranscript(transcript);
 
   if (/^(stop|stop talking|cancel)$/i.test(lower)) {
     return { intent: 'STOP' };
@@ -49,6 +66,9 @@ export function parseCommand(transcript: string, templates: SiteTemplate[]): Com
   }
 
   // Tab Management
+  if (/^(?:open (?:a )?new tab|new tab|open (?:a )?blank tab|blank tab|create (?:a )?(?:new )?tab)$/i.test(lower)) {
+    return { intent: 'NEW_TAB' };
+  }
   if (/^(?:close|exit|delete|remove)(?: the| this| current| active)?(?: tab)?$/i.test(lower) && !/close (?:all|other|duplicate)/i.test(lower)) {
     return { intent: 'CLOSE_ACTIVE_TAB' };
   }
@@ -207,14 +227,14 @@ export function parseCommand(transcript: string, templates: SiteTemplate[]): Com
     const siteName = template.site.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const openSite = new RegExp(`^open\\s+${siteName}\\s+and\\s+search\\s+(.+)$`, 'i');
     const searchOnSite = new RegExp(`^search\\s+(.+)\\s+on\\s+${siteName}$`, 'i');
-    const match = text.match(openSite) ?? text.match(searchOnSite);
+    const match = lower.match(openSite) ?? lower.match(searchOnSite);
 
     if (match?.[1]) {
       return { intent: 'SITE_SEARCH', site: template.site, query: cleanQuery(match[1]) };
     }
   }
 
-  const naturalSiteMatch = text.match(/^search\s+(.+)\s+on\s+(.+)$/i);
+  const naturalSiteMatch = lower.match(/^search\s+(.+)\s+on\s+(.+)$/i);
   if (naturalSiteMatch?.[1] && naturalSiteMatch[2] && findTemplate(templates, naturalSiteMatch[2])) {
     return {
       intent: 'SITE_SEARCH',
@@ -228,7 +248,7 @@ export function parseCommand(transcript: string, templates: SiteTemplate[]): Com
     return { intent: 'WEB_SEARCH', query: cleanQuery(webSearch[1]) };
   }
 
-  return { intent: 'UNKNOWN', transcript: text };
+  return { intent: 'UNKNOWN', transcript: lower };
 }
 
 function cleanQuery(query: string) {

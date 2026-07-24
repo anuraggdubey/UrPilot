@@ -60,6 +60,11 @@ function startRecognition() {
         try {
           isRecognizing = true;
           recognition?.start();
+          // Clear any previous error status when successfully restarted
+          chrome.runtime.sendMessage({
+            type: 'PANEL_UPDATE',
+            payload: { status: 'Listening', listening: true }
+          } satisfies ExtensionMessage);
         } catch {
           isRecognizing = false;
         }
@@ -68,10 +73,44 @@ function startRecognition() {
 
     recognition.onerror = (event) => {
       isRecognizing = false;
+
+      // These errors are normal and don't need user-facing alerts
+      const silentErrors = ['no-speech', 'aborted'];
+      if (silentErrors.includes(event.error)) {
+        // Auto-restart if we should still be listening
+        if (shouldListen) {
+          setTimeout(() => {
+            if (shouldListen && !isRecognizing) {
+              try {
+                isRecognizing = true;
+                recognition?.start();
+              } catch {
+                isRecognizing = false;
+              }
+            }
+          }, 300);
+        }
+        return;
+      }
+
+      // Network or service errors — show briefly, then auto-retry
       chrome.runtime.sendMessage({
         type: 'PANEL_UPDATE',
-        payload: { status: `Speech recognition error: ${event.error}`, listening: shouldListen }
+        payload: { status: `Speech recognition error: ${event.error}. Retrying...`, listening: shouldListen }
       } satisfies ExtensionMessage);
+
+      if (shouldListen) {
+        setTimeout(() => {
+          if (shouldListen && !isRecognizing) {
+            try {
+              isRecognizing = true;
+              recognition?.start();
+            } catch {
+              isRecognizing = false;
+            }
+          }
+        }, 1500);
+      }
     };
   }
 

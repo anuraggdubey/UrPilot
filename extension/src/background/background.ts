@@ -51,10 +51,11 @@ async function handleMessage(message: ExtensionMessage) {
       await toggleListening();
       return { ok: true };
     case 'TRANSCRIPT_INTERIM':
-      broadcastPanelUpdate({ status: 'Listening', transcript: message.text, listening: true });
+      broadcastPanelUpdate({ status: 'Listening', transcript: message.text, listening: true, error: undefined });
       return { ok: true };
     case 'TRANSCRIPT_FINAL':
     case 'ROUTE_COMMAND':
+      broadcastPanelUpdate({ error: undefined });
       await routeTranscript(message.type === 'TRANSCRIPT_FINAL' ? message.text : message.transcript);
       return { ok: true };
     case 'SPEAK':
@@ -164,6 +165,9 @@ async function routeTranscript(transcript: string) {
       break;
     case 'ASK_PAGE_QUESTION':
       await askActivePageQuestion(command.question);
+      break;
+    case 'NEW_TAB':
+      await openNewTab();
       break;
     case 'CLOSE_ACTIVE_TAB':
       await closeActiveTab();
@@ -595,15 +599,33 @@ async function findTabByTarget(target?: string) {
   if (!target || target === 'this' || target === 'current' || target === 'tab') {
     return activeTab;
   }
+
+  const aliasMap: Record<string, string> = {
+    'the gift': 'github',
+    'gift': 'github',
+    'git hub': 'github',
+    'yt': 'youtube',
+    'x': 'twitter'
+  };
+
+  const lowerTarget = (aliasMap[target.toLowerCase().trim()] || target.toLowerCase()).trim();
   const tabs = await chrome.tabs.query({ currentWindow: true });
-  const lowerTarget = target.toLowerCase();
+
   const matched = tabs.find(
     (t) =>
       t.title?.toLowerCase().includes(lowerTarget) ||
       t.url?.toLowerCase().includes(lowerTarget)
   );
-  return matched || activeTab;
+
+  return matched;
 }
+
+async function openNewTab() {
+  await chrome.tabs.create({ active: true });
+  broadcastPanelUpdate({ status: 'Opened a new tab.' });
+  speak('Opened a new tab.');
+}
+
 async function closeActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tab?.id) {
@@ -637,8 +659,19 @@ async function switchToTabTitle(target: string) {
     broadcastPanelUpdate({ status: `Switched to ${tab.title || target}` });
     speak(`Switched to ${tab.title || target}.`);
   } else {
-    broadcastPanelUpdate({ status: `Could not find tab matching "${target}".` });
-    speak('Tab not found.');
+    const normalized = target.toLowerCase().trim();
+    if (normalized.includes('github') || normalized.includes('gift')) {
+      await chrome.tabs.create({ url: 'https://github.com', active: true });
+      broadcastPanelUpdate({ status: 'Opened GitHub in new tab.' });
+      speak('Opening GitHub.');
+    } else if (normalized.includes('youtube')) {
+      await chrome.tabs.create({ url: 'https://youtube.com', active: true });
+      broadcastPanelUpdate({ status: 'Opened YouTube in new tab.' });
+      speak('Opening YouTube.');
+    } else {
+      broadcastPanelUpdate({ status: `No open tab found matching "${target}".` });
+      speak(`No tab found matching ${target}.`);
+    }
   }
 }
 
@@ -764,29 +797,71 @@ async function handleMediaControl(action: 'play' | 'pause' | 'stop' | 'mute' | '
   await chrome.scripting.executeScript({
     target: { tabId: tab.id },
     func: (act: string, r?: number) => {
+      let operated = false;
+
+      // 1. YouTube specific controls
+      const ytPlayBtn = document.querySelector<HTMLButtonElement>('.ytp-play-button');
+      if (ytPlayBtn && location.hostname.includes('youtube.com')) {
+        const isPlaying = !ytPlayBtn.classList.contains('ytp-play-button-paused') &&
+                          document.querySelector('video')?.paused === false;
+
+        if (act === 'pause' || act === 'stop') {
+          if (isPlaying) {
+            ytPlayBtn.click();
+            operated = true;
+          }
+        } else if (act === 'play') {
+          if (!isPlaying) {
+            ytPlayBtn.click();
+            operated = true;
+          }
+        }
+      }
+
+      // 2. HTML5 Media Elements (<video> & <audio>)
       const media = Array.from(document.querySelectorAll<HTMLMediaElement>('video, audio'));
-      if (media.length === 0) return false;
-      media.forEach((el) => {
-        if (act === 'play') void el.play();
-        else if (act === 'pause' || act === 'stop') el.pause();
-        else if (act === 'mute') el.muted = true;
-        else if (act === 'unmute') el.muted = false;
-        else if (act === 'speed' && r) el.playbackRate = r;
-      });
-      return true;
+      if (media.length > 0) {
+        media.forEach((el) => {
+          if (act === 'play') {
+            void el.play();
+            operated = true;
+          } else if (act === 'pause' || act === 'stop') {
+            el.pause();
+            operated = true;
+          } else if (act === 'mute') {
+            el.muted = true;
+            operated = true;
+          } else if (act === 'unmute') {
+            el.muted = false;
+            operated = true;
+          } else if (act === 'speed' && r) {
+            el.playbackRate = r;
+            operated = true;
+          }
+        });
+      }
+
+      // 3. Fallback: Dispatch YouTube / HTML5 keyboard shortcut 'k'
+      if (!operated && (act === 'play' || act === 'pause' || act === 'stop')) {
+        const kEvent = new KeyboardEvent('keydown', { key: 'k', code: 'KeyK', keyCode: 75, which: 75, bubbles: true });
+        document.dispatchEvent(kEvent);
+        operated = true;
+      }
+
+      return operated;
     },
     args: [action, rate ?? 1.0]
   });
 
   const descriptions: Record<string, string> = {
-    play: 'Playing media',
-    pause: 'Paused media',
-    stop: 'Stopped media',
-    mute: 'Muted media',
-    unmute: 'Unmuted media',
+    play: 'Playing video',
+    pause: 'Paused video',
+    stop: 'Stopped video',
+    mute: 'Muted video',
+    unmute: 'Unmuted video',
     speed: `Set playback speed to ${rate}x`
   };
-  const desc = descriptions[action] || 'Updated media playback';
+  const desc = descriptions[action] || 'Updated video playback';
   broadcastPanelUpdate({ status: desc });
   speak(desc);
 }
@@ -810,13 +885,27 @@ async function handleCopyToClipboard(target: 'url' | 'title') {
   const tab = await getActiveTab();
   if (!tab?.id) return;
   const text = target === 'url' ? tab.url || '' : tab.title || '';
+
   await chrome.scripting.executeScript({
     target: { tabId: tab.id },
     func: (val: string) => {
-      navigator.clipboard.writeText(val);
+      try {
+        const el = document.createElement('textarea');
+        el.value = val;
+        el.style.position = 'fixed';
+        el.style.left = '-9999px';
+        document.body.appendChild(el);
+        el.focus();
+        el.select();
+        document.execCommand('copy');
+        el.remove();
+      } catch {
+        void navigator.clipboard?.writeText(val);
+      }
     },
     args: [text]
-  });
+  }).catch(() => undefined);
+
   const label = target === 'url' ? 'URL' : 'Page Title';
   broadcastPanelUpdate({ status: `Copied ${label} to clipboard!` });
   speak(`Copied ${label}.`);

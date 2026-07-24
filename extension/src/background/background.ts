@@ -358,13 +358,7 @@ async function suggestReplyForActivePage() {
 }
 
 async function openDirectUrl(label: string, url: string) {
-  const tab = await getActiveTab();
-  if (tab.id) {
-    await chrome.tabs.update(tab.id, { url, active: true });
-  } else {
-    await chrome.tabs.create({ url, active: true });
-  }
-
+  await chrome.tabs.create({ url, active: true });
   broadcastPanelUpdate({ status: `Opened ${label}` });
   speak(`Opening ${label}`);
 }
@@ -416,21 +410,13 @@ async function siteSearch(site: string, query: string) {
 async function webSearch(query: string, summarizeAfterNavigation: boolean) {
   const { backendBaseUrl } = await getSettings();
   const result = await apiFetch<SearchResponse>(`${backendBaseUrl}/api/search`, { query });
-  const tab = await getActiveTab();
 
-  if (tab.id) {
-    await chrome.tabs.update(tab.id, { url: result.top.url, active: true });
-    if (summarizeAfterNavigation) {
-      await waitForTabLoad(tab.id);
-      await summarizeTab(tab.id, 'steps');
-    } else {
-      speak(`Opening ${result.top.title}`);
-    }
+  const newTab = await chrome.tabs.create({ url: result.top.url, active: true });
+  if (summarizeAfterNavigation && newTab.id) {
+    await waitForTabLoad(newTab.id);
+    await summarizeTab(newTab.id, 'steps');
   } else {
-    await chrome.tabs.create({ url: result.top.url, active: true });
-    if (!summarizeAfterNavigation) {
-      speak(`Opening ${result.top.title}`);
-    }
+    speak(`Opening ${result.top.title}`);
   }
 
   broadcastPanelUpdate({ status: `Opened ${result.top.title}`, transcript: query });

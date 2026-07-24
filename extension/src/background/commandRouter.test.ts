@@ -46,7 +46,46 @@ describe('parseCommand', () => {
     ['scroll down', { intent: 'SCROLL_PAGE', direction: 'down' }],
     ['highlight stellar on page', { intent: 'HIGHLIGHT_KEYWORD', keyword: 'stellar' }],
     ['set a timer for 15 minutes', { intent: 'SET_TIMER', minutes: 15 }],
-    ['remind me in 30 minutes to take a break', { intent: 'SET_REMINDER', minutes: 30, message: 'take a break' }]
+    ['remind me in 30 minutes to take a break', { intent: 'SET_REMINDER', minutes: 30, message: 'take a break' }],
+    ['open chrome web store', { intent: 'OPEN_DIRECT_URL', label: 'Chrome Web Store', url: 'https://chromewebstore.google.com' }],
+    ['open webstore', { intent: 'OPEN_DIRECT_URL', label: 'Chrome Web Store', url: 'https://chromewebstore.google.com' }],
+    ['open crow web store', { intent: 'OPEN_DIRECT_URL', label: 'Chrome Web Store', url: 'https://chromewebstore.google.com' }],
+    ['open google drive', { intent: 'OPEN_DIRECT_URL', label: 'Google Drive', url: 'https://drive.google.com' }],
+    ['back', { intent: 'NAVIGATE_HISTORY', direction: 'back' }],
+    ['go back', { intent: 'NAVIGATE_HISTORY', direction: 'back' }],
+    ['forward', { intent: 'NAVIGATE_HISTORY', direction: 'forward' }],
+    ['refresh page', { intent: 'RELOAD_TAB' }],
+    ['reload tab', { intent: 'RELOAD_TAB' }],
+    ['duplicate tab', { intent: 'DUPLICATE_TAB' }],
+    ['new window', { intent: 'NEW_WINDOW' }],
+    ['close window', { intent: 'CLOSE_WINDOW' }],
+    ['zoom in', { intent: 'ZOOM_PAGE', action: 'in' }],
+    ['zoom out', { intent: 'ZOOM_PAGE', action: 'out' }],
+    ['reset zoom', { intent: 'ZOOM_PAGE', action: 'reset' }],
+    ['bookmark page', { intent: 'BOOKMARK_PAGE' }],
+    ['open vercel', { intent: 'OPEN_DIRECT_URL', label: 'Vercel', url: 'https://vercel.com' }],
+    ['open render', { intent: 'OPEN_DIRECT_URL', label: 'Render', url: 'https://render.com' }],
+    ['open dribbble', { intent: 'OPEN_DIRECT_URL', label: 'Dribbble', url: 'https://dribbble.com' }],
+    ['open dribble', { intent: 'OPEN_DIRECT_URL', label: 'Dribbble', url: 'https://dribbble.com' }],
+    ['open 21st.dev', { intent: 'OPEN_DIRECT_URL', label: '21st.dev', url: 'https://21st.dev' }],
+    ['open 21st dev', { intent: 'OPEN_DIRECT_URL', label: '21st.dev', url: 'https://21st.dev' }],
+    ['open motion.dev', { intent: 'OPEN_DIRECT_URL', label: 'Motion.dev', url: 'https://motion.dev' }],
+    ['open supabase', { intent: 'OPEN_DIRECT_URL', label: 'Supabase', url: 'https://supabase.com' }],
+    ['open netlify', { intent: 'OPEN_DIRECT_URL', label: 'Netlify', url: 'https://www.netlify.com' }],
+    ['open tailwind', { intent: 'OPEN_DIRECT_URL', label: 'Tailwind CSS', url: 'https://tailwindcss.com' }],
+    ['open excel', { intent: 'OPEN_DIRECT_URL', label: 'Google Sheets', url: 'https://sheets.google.com' }],
+    ['open my aadhar', { intent: 'OPEN_DIRECT_URL', label: 'My Aadhaar Portal', url: 'https://myaadhaar.uidai.gov.in' }],
+    ['open pan india', { intent: 'OPEN_DIRECT_URL', label: 'Income Tax PAN Portal', url: 'https://eportal.incometax.gov.in' }],
+    ['open binance', { intent: 'OPEN_DIRECT_URL', label: 'Binance', url: 'https://www.binance.com' }],
+    ['open telegram', { intent: 'OPEN_DIRECT_URL', label: 'Telegram Web', url: 'https://web.telegram.org' }],
+    ['open bbc news', { intent: 'OPEN_DIRECT_URL', label: 'BBC News', url: 'https://www.bbc.com/news' }],
+    ['open coc', { intent: 'OPEN_DIRECT_URL', label: 'Clash of Clans', url: 'https://supercell.com/en/games/clashofclans' }],
+    ['open ilovepdf', { intent: 'OPEN_DIRECT_URL', label: 'iLovePDF', url: 'https://www.ilovepdf.com' }],
+    ['open hotstar', { intent: 'OPEN_DIRECT_URL', label: 'JioHotstar', url: 'https://www.hotstar.com' }],
+    ['open swiggy', { intent: 'OPEN_DIRECT_URL', label: 'Swiggy', url: 'https://www.swiggy.com' }],
+    ['suggest reply', { intent: 'SUGGEST_REPLY' }],
+    ['what should i tweet', { intent: 'SUGGEST_REPLY' }],
+    ['suggest a comment under this post', { intent: 'SUGGEST_REPLY' }]
   ])('parses %s', (transcript, expected) => {
     expect(parseCommand(transcript, defaultSiteTemplates)).toMatchObject(expected);
   });
@@ -55,7 +94,7 @@ describe('parseCommand', () => {
     expect(parseCommand('open YouTube and search Stellar smart contracts', defaultSiteTemplates)).toMatchObject({
       intent: 'SITE_SEARCH',
       site: 'YouTube',
-      query: 'Stellar smart contracts'
+      query: 'stellar smart contracts'
     });
   });
 

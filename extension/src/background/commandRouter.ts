@@ -1,5 +1,5 @@
 import type { CommandIntent, SiteTemplate } from '../lib/types';
-import { findTemplate } from '../lib/siteTemplates';
+import { findTemplate, resolveSite } from '../lib/siteTemplates';
 
 const POPULAR_APPS: Record<string, { label: string; url: string }> = {
   whatsapp: { label: 'WhatsApp Web', url: 'https://web.whatsapp.com' },
@@ -65,6 +65,56 @@ export function parseCommand(transcript: string, templates: SiteTemplate[]): Com
     return { intent: 'TOGGLE_READER_MODE' };
   }
 
+  // Suggest Reply / Tweet
+  if (
+    /^(?:suggest|generate|give me|what should i|what to)\s+(?:a\s+|some\s+)?(?:reply|tweet|comment)(?: for this| to this| under this| under post)?$/i.test(lower) ||
+    /^(?:suggest reply|suggest tweet|suggest comment|what should i tweet|what should i reply|reply suggestion|tweet suggestion|comment suggestion|how to reply|what to comment|reply to this)$/i.test(lower)
+  ) {
+    return { intent: 'SUGGEST_REPLY' };
+  }
+
+  // Navigation History
+  if (/^(?:back|go back|previous page|last page|go to previous page|go to last page|back page)$/i.test(lower)) {
+    return { intent: 'NAVIGATE_HISTORY', direction: 'back' };
+  }
+  if (/^(?:forward|go forward|forward page|go to next page)$/i.test(lower)) {
+    return { intent: 'NAVIGATE_HISTORY', direction: 'forward' };
+  }
+
+  // Reload & Refresh
+  if (/^(?:reload|refresh|reload page|refresh page|reload tab|refresh tab|reload this page|refresh this page)$/i.test(lower)) {
+    return { intent: 'RELOAD_TAB' };
+  }
+
+  // Duplicate Tab
+  if (/^(?:duplicate|duplicate tab|duplicate this tab|duplicate page|clone tab)$/i.test(lower)) {
+    return { intent: 'DUPLICATE_TAB' };
+  }
+
+  // Window Controls
+  if (/^(?:open (?:a )?new window|new window|open window|create (?:a )?(?:new )?window)$/i.test(lower)) {
+    return { intent: 'NEW_WINDOW' };
+  }
+  if (/^(?:close (?:the |this |current )?window|exit window)$/i.test(lower)) {
+    return { intent: 'CLOSE_WINDOW' };
+  }
+
+  // Zoom Controls
+  if (/^(?:zoom in|make bigger|increase zoom|zoom page in)$/i.test(lower)) {
+    return { intent: 'ZOOM_PAGE', action: 'in' };
+  }
+  if (/^(?:zoom out|make smaller|decrease zoom|zoom page out)$/i.test(lower)) {
+    return { intent: 'ZOOM_PAGE', action: 'out' };
+  }
+  if (/^(?:reset zoom|zoom reset|normal zoom|actual size|100% zoom)$/i.test(lower)) {
+    return { intent: 'ZOOM_PAGE', action: 'reset' };
+  }
+
+  // Bookmarks
+  if (/^(?:bookmark|bookmark page|bookmark this page|add bookmark|save bookmark|bookmark this)$/i.test(lower)) {
+    return { intent: 'BOOKMARK_PAGE' };
+  }
+
   // Tab Management
   if (/^(?:open (?:a )?new tab|new tab|open (?:a )?blank tab|blank tab|create (?:a )?(?:new )?tab)$/i.test(lower)) {
     return { intent: 'NEW_TAB' };
@@ -81,7 +131,7 @@ export function parseCommand(transcript: string, templates: SiteTemplate[]): Com
 
   // Numbered & Named Tab Switching (e.g. "open tab no 3", "move to 3rd tab", "switch to tab 2")
   const numTab = parseTabNumber(lower);
-  if (numTab !== null && /^(?:open|move to|switch to|go to|select|jump to)?\s*(?:the\s+)?(?:tab\s+(?:no\.?|number\s+)?\S+|\S+\s+tab)$/i.test(lower)) {
+  if (numTab !== null && /^(?:open|move to|switch to|go to|select|jump to)?\s*(?:the\s+)?(?:tab\s+(?:no\.?\s*|number\s+)?\S+|\S+\s+tab)$/i.test(lower)) {
     return { intent: 'SWITCH_TO_TAB', tabIndex: numTab };
   }
   if (/^(?:next tab|go to next tab|switch to next tab|tab right)$/i.test(lower)) {
@@ -200,12 +250,18 @@ export function parseCommand(transcript: string, templates: SiteTemplate[]): Com
     return { intent: 'OPEN_SAVED_LINKS' };
   }
 
-  // Direct app launcher matching (e.g., "open whatsapp", "whatsapp", "open youtube")
+  // Direct app launcher matching (e.g., "open whatsapp", "whatsapp", "open youtube", "open chrome web store")
   const openAppMatch = lower.match(/^(?:open\s+|go to\s+)?([a-z0-9\s.]+?)$/);
   const targetKey = openAppMatch?.[1]?.trim();
-  if (targetKey && POPULAR_APPS[targetKey]) {
-    const app = POPULAR_APPS[targetKey];
-    return { intent: 'OPEN_DIRECT_URL', label: app.label, url: app.url };
+  if (targetKey) {
+    if (POPULAR_APPS[targetKey]) {
+      const app = POPULAR_APPS[targetKey];
+      return { intent: 'OPEN_DIRECT_URL', label: app.label, url: app.url };
+    }
+    const resolved = resolveSite(targetKey);
+    if (resolved) {
+      return { intent: 'OPEN_DIRECT_URL', label: resolved.label, url: resolved.url };
+    }
   }
 
   // Direct domain URL (e.g. "open github.com")

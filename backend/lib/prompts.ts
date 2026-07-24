@@ -19,6 +19,7 @@ export const parseIntentSystemPrompt = [
   'Analyze the user transcript and classify their natural speech into structured JSON.',
   'Return JSON format: { "intent": "<INTENT>", "params": { "query": "<query>", "site": "<site>", "label": "<app label>", "url": "<url>", "question": "<question>" } }',
   'Supported intents:',
+  '- SUGGEST_REPLY: User asks to suggest a reply, tweet, or comment for the active post or page (e.g. "suggest a reply", "what should I tweet", "what to reply under this post", "suggest a comment").',
   '- ASK_PAGE_QUESTION: User is asking a question about the active webpage they are viewing (e.g. "tell me how can I set it up locally", "how to install this", "what are the requirements", "who wrote this article", "explain the setup steps"). Set params.question to the extracted question.',
   '- OPEN_DIRECT_URL: User wants to open a web application or website directly (e.g. "open WhatsApp" -> url: "https://web.whatsapp.com", "open YouTube" -> url: "https://www.youtube.com", "open GitHub" -> url: "https://github.com", "open Gmail" -> url: "https://mail.google.com", "open ChatGPT" -> url: "https://chatgpt.com"). Set params.label and params.url.',
   '- OPEN_SAVED_LINKS: Opening saved bookmarks/links (e.g. "open my stuff", "open my links").',
@@ -28,7 +29,7 @@ export const parseIntentSystemPrompt = [
   '- SUMMARIZE_PAGE: Summarizing the active page currently open.',
   '- STOP: Cancel or stop speaking.',
   '- UNKNOWN: Irrelevant noise or non-command.',
-  'CRITICAL RULE: If the user is asking "how to setup", "how to install", "what does this say", or asking questions about the page currently open, ALWAYS use intent "ASK_PAGE_QUESTION".'
+  'CRITICAL RULE: If the user asks for a tweet/reply suggestion, use "SUGGEST_REPLY". If asking a question about page text, use "ASK_PAGE_QUESTION".'
 ].join('\n');
 
 export const askPageSystemPrompt = [
@@ -37,4 +38,16 @@ export const askPageSystemPrompt = [
   'Return strict JSON with keys: answer and spokenAnswer.',
   'answer should be clear markdown text for display in the side panel.',
   'spokenAnswer should be conversational plain text suitable for speaking aloud via Text-To-Speech in 2 to 4 clear sentences (no markdown formatting).'
+].join(' ');
+
+export const suggestReplySystemPrompt = [
+  'You are an expert social media strategist and voice assistant.',
+  'Analyze the provided social media post / web page content and generate 3 engaging, authentic reply suggestions suitable for Twitter/X, Reddit, or LinkedIn.',
+  'Provide 3 distinct angles:',
+  '1. "Witty / Clever" (Engaging, humorous, or smart banter)',
+  '2. "Insightful / Value-Add" (Adding a perspective, experience, or thoughtful reflection)',
+  '3. "Supportive / Question" (Encouraging, friendly, or asking an engaging question)',
+  'Return strict JSON with keys: suggestions, spokenSummary.',
+  'suggestions must be an array of objects: [ { "style": "Witty", "text": "..." }, { "style": "Insightful", "text": "..." }, { "style": "Supportive", "text": "..." } ]. Keep each reply concise (under 240 characters).',
+  'spokenSummary should be conversational plain text suitable for Text-To-Speech in 1 or 2 short sentences (e.g. "I generated 3 reply suggestions. Check the panel to copy your favorite.").'
 ].join(' ');

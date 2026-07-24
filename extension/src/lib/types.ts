@@ -32,6 +32,7 @@ export type PanelPayload = {
   readerModeActive?: boolean;
   readerContent?: { title: string; text: string; url: string };
   readAloudStatus?: 'playing' | 'paused' | 'stopped';
+  replySuggestions?: Array<{ style: string; text: string }>;
 };
 
 export type UserPreferences = {
@@ -53,7 +54,9 @@ export type ExtensionMessage =
   | { type: 'STOP_LISTENING' }
   | { type: 'TOGGLE_LISTENING' }
   | { type: 'TRANSCRIPT_INTERIM'; text: string }
-  | { type: 'TRANSCRIPT_FINAL'; text: string }
+  | { type: 'TRANSCRIPT_FINAL'; text: string; confidence?: number }
+  | { type: 'FALLBACK_STT' }
+  | { type: 'FALLBACK_STT_RESULT'; text: string }
   | { type: 'EXTRACT_CONTENT' }
   | { type: 'PAGE_CONTENT'; title: string; text: string; url: string }
   | { type: 'ROUTE_COMMAND'; transcript: string }
@@ -93,6 +96,14 @@ export type CommandIntent =
   | { intent: 'HIGHLIGHT_KEYWORD'; keyword: string }
   | { intent: 'SET_TIMER'; minutes: number; label?: string }
   | { intent: 'SET_REMINDER'; minutes: number; message: string }
+  | { intent: 'NAVIGATE_HISTORY'; direction: 'back' | 'forward' }
+  | { intent: 'RELOAD_TAB' }
+  | { intent: 'DUPLICATE_TAB' }
+  | { intent: 'NEW_WINDOW' }
+  | { intent: 'CLOSE_WINDOW' }
+  | { intent: 'ZOOM_PAGE'; action: 'in' | 'out' | 'reset' }
+  | { intent: 'BOOKMARK_PAGE' }
+  | { intent: 'SUGGEST_REPLY' }
   | { intent: 'STOP' }
   | { intent: 'UNKNOWN'; transcript: string };
 
@@ -118,5 +129,13 @@ export type SummaryResponse = {
 export type AskPageResponse = {
   answer: string;
   spokenAnswer: string;
+};
+
+export type SuggestReplyResponse = {
+  suggestions: Array<{
+    style: string;
+    text: string;
+  }>;
+  spokenSummary: string;
 };
 

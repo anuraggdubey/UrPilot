@@ -2,7 +2,7 @@ import { parseCommand } from './commandRouter';
 import { broadcastPanelUpdate, speak, stopSpeaking } from './messageHub';
 import { buildSiteSearchUrl, defaultSiteTemplates, findTemplate } from '../lib/siteTemplates';
 import { getSettings } from '../lib/storage';
-import type { AskPageResponse, ExtensionMessage, PageContent, SearchResponse, SummaryResponse } from '../lib/types';
+import type { AskPageResponse, ExtensionMessage, PageContent, SearchResponse, SuggestReplyResponse, SummaryResponse } from '../lib/types';
 
 let listening = false;
 let activeController: AbortController | undefined;
@@ -56,7 +56,10 @@ async function handleMessage(message: ExtensionMessage) {
     case 'TRANSCRIPT_FINAL':
     case 'ROUTE_COMMAND':
       broadcastPanelUpdate({ error: undefined });
-      await routeTranscript(message.type === 'TRANSCRIPT_FINAL' ? message.text : message.transcript);
+      await routeTranscript(
+        message.type === 'TRANSCRIPT_FINAL' ? message.text : message.transcript,
+        message.type === 'TRANSCRIPT_FINAL' ? message.confidence : undefined
+      );
       return { ok: true };
     case 'SPEAK':
       speak(message.text);
@@ -108,11 +111,33 @@ async function ensureOffscreenDocument() {
   });
 }
 
-async function routeTranscript(transcript: string) {
+async function routeTranscript(transcript: string, confidence?: number) {
   const settings = await getSettings();
   let command = parseCommand(transcript, settings.siteTemplates);
 
   broadcastPanelUpdate({ status: 'Processing speech...', transcript });
+
+  // If command is UNKNOWN or confidence is low, attempt offline Whisper fallback first
+  const isLowConfidence = confidence !== undefined && confidence > 0 && confidence < 0.55;
+  if (command.intent === 'UNKNOWN' || isLowConfidence) {
+    try {
+      const fallbackResponse = await chrome.runtime.sendMessage({ type: 'FALLBACK_STT' } satisfies ExtensionMessage)
+        .catch(() => null);
+
+      if (fallbackResponse?.text) {
+        const fallbackTranscript = fallbackResponse.text.trim();
+        const fallbackCommand = parseCommand(fallbackTranscript, settings.siteTemplates);
+
+        if (fallbackCommand.intent !== 'UNKNOWN') {
+          command = fallbackCommand;
+          transcript = fallbackTranscript;
+          broadcastPanelUpdate({ status: 'Resolved via offline Whisper', transcript });
+        }
+      }
+    } catch (fallbackErr) {
+      console.warn('Offline fallback STT failed:', fallbackErr);
+    }
+  }
 
   if (command.intent === 'UNKNOWN') {
     try {
@@ -133,6 +158,8 @@ async function routeTranscript(transcript: string) {
           command = { intent: 'ASK_PAGE_QUESTION', question: (llmResult.params as any).question };
         } else if (llmResult.intent === 'SUMMARIZE_PAGE') {
           command = { intent: 'SUMMARIZE_PAGE' };
+        } else if (llmResult.intent === 'SUGGEST_REPLY') {
+          command = { intent: 'SUGGEST_REPLY' };
         } else if (llmResult.intent === 'OPEN_DIRECT_URL' && (llmResult.params as any)?.url) {
           command = { intent: 'OPEN_DIRECT_URL', label: (llmResult.params as any).label || 'website', url: (llmResult.params as any).url };
         } else if (llmResult.intent === 'OPEN_SAVED_LINKS') {
@@ -166,8 +193,32 @@ async function routeTranscript(transcript: string) {
     case 'ASK_PAGE_QUESTION':
       await askActivePageQuestion(command.question);
       break;
+    case 'SUGGEST_REPLY':
+      await suggestReplyForActivePage();
+      break;
     case 'NEW_TAB':
       await openNewTab();
+      break;
+    case 'NAVIGATE_HISTORY':
+      await navigateHistory(command.direction);
+      break;
+    case 'RELOAD_TAB':
+      await reloadTab();
+      break;
+    case 'DUPLICATE_TAB':
+      await duplicateActiveTab();
+      break;
+    case 'NEW_WINDOW':
+      await openNewWindow();
+      break;
+    case 'CLOSE_WINDOW':
+      await closeCurrentWindow();
+      break;
+    case 'ZOOM_PAGE':
+      await zoomPage(command.action);
+      break;
+    case 'BOOKMARK_PAGE':
+      await bookmarkActivePage();
       break;
     case 'CLOSE_ACTIVE_TAB':
       await closeActiveTab();
@@ -273,6 +324,37 @@ async function askActivePageQuestion(question: string) {
     keyPoints: []
   });
   speak(result.spokenAnswer);
+}
+
+async function suggestReplyForActivePage() {
+  const tab = await getActiveTab();
+  if (!tab?.id) {
+    broadcastPanelUpdate({ status: 'No active tab found.' });
+    return;
+  }
+
+  const { backendBaseUrl } = await getSettings();
+  broadcastPanelUpdate({ status: 'Reading post for reply ideas...' });
+
+  try {
+    const pageContent = await extractContent(tab.id);
+    broadcastPanelUpdate({ status: 'Generating reply suggestions with AI...' });
+
+    const result = await apiFetch<SuggestReplyResponse>(`${backendBaseUrl}/api/suggest-reply`, pageContent);
+
+    broadcastPanelUpdate({
+      status: 'Reply suggestions ready!',
+      replySuggestions: result.suggestions,
+      spokenSummary: result.spokenSummary,
+      sourceTitle: pageContent.title,
+      sourceUrl: pageContent.url
+    });
+    speak(result.spokenSummary);
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    broadcastPanelUpdate({ status: 'Failed to generate replies', error: errorMsg });
+    speak('Could not generate reply suggestions for this page.');
+  }
 }
 
 async function openDirectUrl(label: string, url: string) {
@@ -591,6 +673,83 @@ function handleTTSControl(action: 'pause' | 'continue' | 'start' | 'stop') {
     chrome.tts.stop();
     broadcastPanelUpdate({ status: 'Stopped speech.', readAloudStatus: 'stopped' });
   }
+}
+
+async function navigateHistory(direction: 'back' | 'forward') {
+  const tab = await getActiveTab();
+  if (!tab?.id) return;
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (dir: string) => {
+      if (dir === 'back') history.back();
+      else if (dir === 'forward') history.forward();
+    },
+    args: [direction]
+  }).catch(() => undefined);
+  const label = direction === 'back' ? 'Went back' : 'Went forward';
+  broadcastPanelUpdate({ status: label });
+  speak(label);
+}
+
+async function reloadTab() {
+  const tab = await getActiveTab();
+  if (tab?.id) {
+    await chrome.tabs.reload(tab.id);
+    broadcastPanelUpdate({ status: 'Reloaded page.' });
+    speak('Reloaded page.');
+  }
+}
+
+async function duplicateActiveTab() {
+  const tab = await getActiveTab();
+  if (tab?.id) {
+    await chrome.tabs.duplicate(tab.id);
+    broadcastPanelUpdate({ status: 'Duplicated tab.' });
+    speak('Duplicated tab.');
+  }
+}
+
+async function openNewWindow() {
+  await chrome.windows.create({ focused: true });
+  broadcastPanelUpdate({ status: 'Opened new window.' });
+  speak('Opened new window.');
+}
+
+async function closeCurrentWindow() {
+  const win = await chrome.windows.getCurrent();
+  if (win.id) {
+    await chrome.windows.remove(win.id);
+  }
+}
+
+async function zoomPage(action: 'in' | 'out' | 'reset') {
+  const tab = await getActiveTab();
+  if (!tab?.id) return;
+  if (action === 'reset') {
+    await chrome.tabs.setZoom(tab.id, 1.0);
+    broadcastPanelUpdate({ status: 'Zoom reset to 100%.' });
+    speak('Zoom reset.');
+    return;
+  }
+  const currentZoom = await chrome.tabs.getZoom(tab.id);
+  let newZoom = action === 'in' ? currentZoom + 0.15 : currentZoom - 0.15;
+  if (newZoom < 0.5) newZoom = 0.5;
+  if (newZoom > 3.0) newZoom = 3.0;
+  await chrome.tabs.setZoom(tab.id, newZoom);
+  const pct = Math.round(newZoom * 100);
+  broadcastPanelUpdate({ status: `Zoom set to ${pct}%.` });
+  speak(`Zoom ${action === 'in' ? 'in' : 'out'} to ${pct} percent.`);
+}
+
+async function bookmarkActivePage() {
+  const tab = await getActiveTab();
+  if (!tab?.url) return;
+  await chrome.bookmarks.create({
+    title: tab.title || 'Bookmarked Page',
+    url: tab.url
+  });
+  broadcastPanelUpdate({ status: `Bookmarked "${tab.title || 'page'}"!` });
+  speak('Page bookmarked.');
 }
 
 // --- TAB MANAGEMENT HANDLERS ---

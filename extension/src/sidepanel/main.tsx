@@ -11,6 +11,7 @@ import {
   ChevronRight,
   ShieldAlert,
   Check,
+  MessageSquare,
 } from 'lucide-react';
 import '../styles.css';
 import type { ExtensionMessage, PanelPayload } from '../lib/types';
@@ -25,6 +26,7 @@ function SidePanel() {
   });
   const [manualCommand, setManualCommand] = React.useState('');
   const [copied, setCopied] = React.useState(false);
+  const [copiedIndex, setCopiedIndex] = React.useState<number | null>(null);
   const [savedLinksCount, setSavedLinksCount] = React.useState(0);
 
   React.useEffect(() => {
@@ -388,6 +390,69 @@ function SidePanel() {
                 {copied ? 'Copied' : 'Copy'}
               </button>
             </div>
+          </section>
+        )}
+
+        {/* Tweet / Reply Suggestions Card */}
+        {panel.replySuggestions && panel.replySuggestions.length > 0 && (
+          <section className="rounded-xl border border-[#17160F]/15 bg-white p-4 space-y-3 shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <div className="flex items-center gap-1.5 font-display text-sm font-bold text-[#17160F]">
+                <MessageSquare size={16} className="text-[#EFB92E]" />
+                <span>Tweet & Reply Suggestions</span>
+              </div>
+              <span className="font-mono text-[10px] font-bold text-slate-400 uppercase">AI ASSISTANT</span>
+            </div>
+
+            <p className="text-xs text-slate-600">
+              Click <strong className="text-[#17160F]">Copy Reply</strong> on any option below to paste into your comment/tweet box:
+            </p>
+
+            <div className="space-y-2.5">
+              {panel.replySuggestions.map((item, idx) => (
+                <div key={idx} className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2 hover:border-[#EFB92E] transition-colors">
+                  <div className="flex items-center justify-between">
+                    <span className="rounded-full bg-[#17160F] px-2 py-0.5 font-mono text-[10px] font-bold text-[#EFB92E]">
+                      {item.style}
+                    </span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(item.text);
+                        setCopiedIndex(idx);
+                        setTimeout(() => setCopiedIndex(null), 2000);
+                      }}
+                      className="inline-flex items-center gap-1 rounded-full border border-[#17160F] bg-[#EFB92E] px-2.5 py-1 text-[11px] font-bold text-[#17160F] hover:bg-[#17160F] hover:text-white transition-colors"
+                    >
+                      {copiedIndex === idx ? (
+                        <>
+                          <Check size={12} />
+                          <span>Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={12} />
+                          <span>Copy Reply</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-xs text-[#17160F] font-sans leading-relaxed select-all">
+                    "{item.text}"
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            {panel.spokenSummary && (
+              <button
+                onClick={() =>
+                  send(panel.speaking ? { type: 'STOP_SPEAKING' } : { type: 'SPEAK', text: panel.spokenSummary! })
+                }
+                className="w-full rounded-full border border-slate-200 bg-slate-50 py-1.5 text-xs font-semibold text-[#17160F] hover:bg-slate-100"
+              >
+                {panel.speaking ? 'Stop Voice Readout' : '🔊 Listen to Summary'}
+              </button>
+            )}
           </section>
         )}
 

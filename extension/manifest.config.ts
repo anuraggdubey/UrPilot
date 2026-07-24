@@ -17,12 +17,17 @@ export default defineManifest({
   permissions: [
     'storage',
     'tabs',
+    'tabGroups',
     'activeTab',
     'scripting',
     'offscreen',
     'sidePanel',
     'commands',
-    'tts'
+    'tts',
+    'sessions',
+    'alarms',
+    'notifications',
+    'downloads'
   ],
   host_permissions: [
     '<all_urls>',

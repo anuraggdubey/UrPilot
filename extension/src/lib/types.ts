@@ -29,6 +29,9 @@ export type PanelPayload = {
   activeStep?: ActiveStep;
   error?: string;
   micPermissionDenied?: boolean;
+  readerModeActive?: boolean;
+  readerContent?: { title: string; text: string; url: string };
+  readAloudStatus?: 'playing' | 'paused' | 'stopped';
 };
 
 export type UserPreferences = {
@@ -66,6 +69,29 @@ export type CommandIntent =
   | { intent: 'WEB_SEARCH_THEN_SUMMARIZE'; query: string }
   | { intent: 'SUMMARIZE_PAGE' }
   | { intent: 'ASK_PAGE_QUESTION'; question: string }
+  | { intent: 'CLOSE_ACTIVE_TAB' }
+  | { intent: 'CLOSE_OTHER_TABS' }
+  | { intent: 'CLOSE_DUPLICATE_TABS' }
+  | { intent: 'MUTE_OTHER_TABS' }
+  | { intent: 'MUTE_TAB'; target?: string }
+  | { intent: 'UNMUTE_TAB'; target?: string }
+  | { intent: 'PIN_TAB'; target?: string }
+  | { intent: 'UNPIN_TAB'; target?: string }
+  | { intent: 'REOPEN_CLOSED_TAB' }
+  | { intent: 'GROUP_TABS_BY_DOMAIN' }
+  | { intent: 'SWITCH_TO_TAB'; tabIndex: number }
+  | { intent: 'SWITCH_TO_TAB_TITLE'; target: string }
+  | { intent: 'NAVIGATE_TAB_DIR'; direction: 'next' | 'prev' }
+  | { intent: 'MEDIA_CONTROL'; action: 'play' | 'pause' | 'stop' | 'mute' | 'unmute' | 'speed'; rate?: number }
+  | { intent: 'READ_PAGE_ALOUD' }
+  | { intent: 'TTS_CONTROL'; action: 'pause' | 'continue' | 'start' | 'stop' }
+  | { intent: 'TOGGLE_READER_MODE' }
+  | { intent: 'COPY_TO_CLIPBOARD'; target: 'url' | 'title' }
+  | { intent: 'TAKE_SCREENSHOT' }
+  | { intent: 'SCROLL_PAGE'; direction: 'up' | 'down' | 'top' | 'bottom' }
+  | { intent: 'HIGHLIGHT_KEYWORD'; keyword: string }
+  | { intent: 'SET_TIMER'; minutes: number; label?: string }
+  | { intent: 'SET_REMINDER'; minutes: number; message: string }
   | { intent: 'STOP' }
   | { intent: 'UNKNOWN'; transcript: string };
 

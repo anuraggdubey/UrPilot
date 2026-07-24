@@ -60,6 +60,8 @@ function SidePanel() {
     }
   };
 
+  const [showGuide, setShowGuide] = React.useState(false);
+
   return (
     <main className="flex min-h-screen flex-col bg-[#F5F0E6] font-sans text-[#17160F] antialiased">
       {/* Header Bar */}
@@ -67,8 +69,12 @@ function SidePanel() {
         <div className="flex items-center gap-2">
           <span className="font-display text-sm font-bold text-[#17160F]">UrPilot</span>
           {panel.listening ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white uppercase">
+            <span className="inline-flex items-center gap-1 rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white uppercase animate-pulse">
               ● LIVE
+            </span>
+          ) : panel.readAloudStatus === 'playing' ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase">
+              READING ALOUD
             </span>
           ) : panel.summary ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-[#454F32] px-2 py-0.5 text-[10px] font-bold text-white uppercase">
@@ -80,14 +86,23 @@ function SidePanel() {
             </span>
           )}
         </div>
-        <button
-          onClick={openOptions}
-          className="flex h-7 w-7 items-center justify-center rounded-full text-[#17160F] hover:bg-[#17160F]/10 transition-colors"
-          title="Open Settings"
-          aria-label="Open Settings"
-        >
-          <Settings size={15} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setShowGuide(!showGuide)}
+            className="rounded-full bg-white border border-[#17160F]/20 px-2.5 py-1 text-[11px] font-bold text-[#17160F] hover:bg-[#EFB92E] transition-colors"
+            title="Toggle Voice Commands Guide"
+          >
+            {showGuide ? 'Hide Guide' : 'User Guide'}
+          </button>
+          <button
+            onClick={openOptions}
+            className="flex h-7 w-7 items-center justify-center rounded-full text-[#17160F] hover:bg-[#17160F]/10 transition-colors"
+            title="Open Settings"
+            aria-label="Open Settings"
+          >
+            <Settings size={15} />
+          </button>
+        </div>
       </header>
 
       <div className="flex-1 space-y-4 p-4">
@@ -110,7 +125,6 @@ function SidePanel() {
 
         {/* Hero Mic Console Container */}
         <section className="flex flex-col items-center justify-center rounded-2xl border border-[#17160F]/15 bg-white py-6 px-4 text-center shadow-sm space-y-3">
-          {/* Signature Yellow Mic Button */}
           <div className="relative my-2 flex items-center justify-center">
             {panel.listening && (
               <div className="absolute inset-0 rounded-full bg-[#EFB92E] opacity-40 animate-ping pointer-events-none" />
@@ -122,7 +136,7 @@ function SidePanel() {
                   ? 'bg-red-500 text-white'
                   : panel.processing
                   ? 'bg-amber-500 text-white'
-                  : panel.speaking
+                  : panel.speaking || panel.readAloudStatus === 'playing'
                   ? 'bg-[#454F32] text-white'
                   : 'bg-[#EFB92E] text-[#17160F] hover:scale-105 shadow-sm'
               }`}
@@ -141,7 +155,7 @@ function SidePanel() {
               </p>
             ) : (
               <p className="font-sans text-xs italic text-slate-500">
-                {panel.listening ? 'Listening... speak now' : '"summarize this page..."'}
+                {panel.listening ? 'Listening... say "read page aloud", "close duplicates", "speed up 2x"...' : '"summarize this page..."'}
               </p>
             )}
           </div>
@@ -157,6 +171,131 @@ function SidePanel() {
           )}
         </section>
 
+        {/* VOICE COMMANDS & USER GUIDE SECTION */}
+        {showGuide && (
+          <section className="rounded-2xl border border-[#17160F]/20 bg-white p-4 space-y-4 shadow-sm text-xs">
+            <div className="border-b border-slate-100 pb-2">
+              <h3 className="font-display text-sm font-bold text-[#17160F]">📖 UrPilot Voice User Guide</h3>
+              <p className="text-[11px] text-slate-500">Speak any of these commands naturally or click a button to execute.</p>
+            </div>
+
+            {/* Guide Category 1: Speech & Playback Control */}
+            <div className="space-y-1.5">
+              <div className="font-mono text-[10px] font-bold text-[#454F32] uppercase">🗣️ SPEECH & PLAYBACK CONTROL</div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  { cmd: 'stop', label: 'stop' },
+                  { cmd: 'pause', label: 'pause' },
+                  { cmd: 'continue', label: 'continue / resume' },
+                  { cmd: 'start', label: 'start / start over' },
+                  { cmd: 'read page aloud', label: 'read page aloud' }
+                ].map((item) => (
+                  <button
+                    key={item.cmd}
+                    onClick={() => send({ type: 'ROUTE_COMMAND', transcript: item.cmd })}
+                    className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-left hover:bg-[#EFB92E]/20 transition-colors"
+                  >
+                    <div className="font-mono text-[10px] font-bold text-slate-700">"{item.label}"</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Guide Category 2: Tab Management */}
+            <div className="space-y-1.5">
+              <div className="font-mono text-[10px] font-bold text-[#454F32] uppercase">🗂️ TAB MANAGEMENT & NAVIGATION</div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  { cmd: 'close this tab', label: 'close this tab' },
+                  { cmd: 'close duplicate tabs', label: 'close duplicate tabs' },
+                  { cmd: 'close all tabs except this', label: 'close other tabs' },
+                  { cmd: 'open tab no. 3', label: 'open tab no. 3' },
+                  { cmd: 'move to 2nd tab', label: 'move to 2nd tab' },
+                  { cmd: 'next tab', label: 'next tab / prev tab' },
+                  { cmd: 'mute other tabs', label: 'mute other tabs' },
+                  { cmd: 'mute meet tab', label: 'mute meet tab' },
+                  { cmd: 'pin this tab', label: 'pin / unpin tab' },
+                  { cmd: 'reopen closed tab', label: 'reopen closed tab' },
+                  { cmd: 'group tabs by domain', label: 'group tabs by domain' }
+                ].map((item) => (
+                  <button
+                    key={item.cmd}
+                    onClick={() => send({ type: 'ROUTE_COMMAND', transcript: item.cmd })}
+                    className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-left hover:bg-[#EFB92E]/20 transition-colors"
+                  >
+                    <div className="font-mono text-[10px] font-bold text-slate-700">"{item.label}"</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Guide Category 3: Media & Video */}
+            <div className="space-y-1.5">
+              <div className="font-mono text-[10px] font-bold text-[#454F32] uppercase">🎬 MEDIA & VIDEO CONTROLS</div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  { cmd: 'pause video', label: 'pause video' },
+                  { cmd: 'play video', label: 'play video' },
+                  { cmd: 'mute video', label: 'mute video' },
+                  { cmd: 'speed up 2x', label: 'speed up 2x' },
+                  { cmd: 'speed up 1.5x', label: 'speed up 1.5x' },
+                  { cmd: 'normal speed', label: 'normal speed (1x)' }
+                ].map((item) => (
+                  <button
+                    key={item.cmd}
+                    onClick={() => send({ type: 'ROUTE_COMMAND', transcript: item.cmd })}
+                    className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-left hover:bg-[#EFB92E]/20 transition-colors"
+                  >
+                    <div className="font-mono text-[10px] font-bold text-slate-700">"{item.label}"</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Guide Category 4: Page Utilities & Timers */}
+            <div className="space-y-1.5">
+              <div className="font-mono text-[10px] font-bold text-[#454F32] uppercase">⚡ UTILITIES & TIMERS</div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  { cmd: 'clean view', label: 'clean view / reader' },
+                  { cmd: 'copy url', label: 'copy url' },
+                  { cmd: 'take screenshot', label: 'take screenshot' },
+                  { cmd: 'scroll down', label: 'scroll down / up' },
+                  { cmd: 'highlight stellar on page', label: 'highlight [word]' },
+                  { cmd: 'set a timer for 15 minutes', label: 'set timer for 15 min' }
+                ].map((item) => (
+                  <button
+                    key={item.cmd}
+                    onClick={() => send({ type: 'ROUTE_COMMAND', transcript: item.cmd })}
+                    className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-left hover:bg-[#EFB92E]/20 transition-colors"
+                  >
+                    <div className="font-mono text-[10px] font-bold text-slate-700">"{item.label}"</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Clean Reader View Display */}
+        {panel.readerModeActive && panel.readerContent && (
+          <section className="rounded-xl border border-emerald-300 bg-emerald-50/60 p-4 space-y-3 shadow-sm">
+            <div className="flex items-center justify-between border-b border-emerald-200 pb-2">
+              <span className="font-mono text-[10px] font-bold text-emerald-800 uppercase">📖 CLEAN READER MODE</span>
+              <button
+                onClick={() => setPanel((p) => ({ ...p, readerModeActive: false }))}
+                className="text-xs font-bold text-emerald-700 hover:underline"
+              >
+                Close View
+              </button>
+            </div>
+            <h3 className="font-display text-sm font-bold text-emerald-950">{panel.readerContent.title}</h3>
+            <div className="max-h-60 overflow-y-auto text-xs text-emerald-900 leading-relaxed whitespace-pre-wrap pr-1 font-serif bg-white/80 p-3 rounded-lg border border-emerald-100">
+              {panel.readerContent.text}
+            </div>
+          </section>
+        )}
+
         {/* Action Pills Menu */}
         <section className="space-y-1.5">
           <button
@@ -168,18 +307,18 @@ function SidePanel() {
           </button>
 
           <button
-            onClick={() => send({ type: 'ROUTE_COMMAND', transcript: 'search Soroban docs' })}
+            onClick={() => send({ type: 'ROUTE_COMMAND', transcript: 'read page aloud' })}
             className="w-full text-left rounded-xl border border-[#17160F]/15 bg-white p-3 text-xs font-semibold text-[#17160F] hover:bg-[#EFB92E] transition-colors flex items-center justify-between shadow-sm"
           >
-            <span>Search Soroban docs</span>
+            <span>Read page aloud</span>
             <ChevronRight size={14} />
           </button>
 
           <button
-            onClick={() => send({ type: 'ROUTE_COMMAND', transcript: 'summarize this page' })}
+            onClick={() => send({ type: 'ROUTE_COMMAND', transcript: 'clean view' })}
             className="w-full text-left rounded-xl border border-[#17160F]/15 bg-white p-3 text-xs font-semibold text-[#17160F] hover:bg-[#EFB92E] transition-colors flex items-center justify-between shadow-sm"
           >
-            <span>Summarize this page</span>
+            <span>Clean reader view</span>
             <ChevronRight size={14} />
           </button>
         </section>
@@ -262,7 +401,7 @@ function SidePanel() {
               id="manual-cmd"
               type="text"
               className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs text-[#17160F] outline-none focus:border-[#EFB92E]"
-              placeholder="e.g. search Soroban docs and summarize"
+              placeholder="e.g. read page aloud, close duplicates, 2x speed"
               value={manualCommand}
               onChange={(e) => setManualCommand(e.target.value)}
               onKeyDown={(e) => {
@@ -288,7 +427,7 @@ function SidePanel() {
       </div>
 
       <footer className="border-t border-[#17160F]/15 py-2 px-4 text-center font-mono text-[9px] text-slate-500">
-        URPILOT V0.1.0 • GROQ & TAVILY ENGINE
+        URPILOT V0.1.0 • OFFLINE VOICE & BROWSER AUTOMATION
       </footer>
     </main>
   );

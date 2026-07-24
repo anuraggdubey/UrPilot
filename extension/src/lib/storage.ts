@@ -50,4 +50,3 @@ export async function setUserPreferences(userPreferences: Partial<UserPreference
   const next = { ...current.userPreferences, ...userPreferences };
   await chrome.storage.sync.set({ userPreferences: next });
 }
-

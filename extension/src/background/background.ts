@@ -165,6 +165,75 @@ async function routeTranscript(transcript: string) {
     case 'ASK_PAGE_QUESTION':
       await askActivePageQuestion(command.question);
       break;
+    case 'CLOSE_ACTIVE_TAB':
+      await closeActiveTab();
+      break;
+    case 'CLOSE_OTHER_TABS':
+      await closeOtherTabs();
+      break;
+    case 'CLOSE_DUPLICATE_TABS':
+      await closeDuplicateTabs();
+      break;
+    case 'SWITCH_TO_TAB':
+      await switchToTab(command.tabIndex);
+      break;
+    case 'SWITCH_TO_TAB_TITLE':
+      await switchToTabTitle(command.target);
+      break;
+    case 'NAVIGATE_TAB_DIR':
+      await navigateTabDir(command.direction);
+      break;
+    case 'MUTE_OTHER_TABS':
+      await muteOtherTabs();
+      break;
+    case 'MUTE_TAB':
+      await setTabMuted(command.target, true);
+      break;
+    case 'UNMUTE_TAB':
+      await setTabMuted(command.target, false);
+      break;
+    case 'PIN_TAB':
+      await setTabPinned(command.target, true);
+      break;
+    case 'UNPIN_TAB':
+      await setTabPinned(command.target, false);
+      break;
+    case 'REOPEN_CLOSED_TAB':
+      await reopenClosedTab();
+      break;
+    case 'GROUP_TABS_BY_DOMAIN':
+      await groupTabsByDomain();
+      break;
+    case 'MEDIA_CONTROL':
+      await handleMediaControl(command.action, command.rate);
+      break;
+    case 'READ_PAGE_ALOUD':
+      await handleReadPageAloud();
+      break;
+    case 'TTS_CONTROL':
+      handleTTSControl(command.action);
+      break;
+    case 'TOGGLE_READER_MODE':
+      await handleToggleReaderMode();
+      break;
+    case 'COPY_TO_CLIPBOARD':
+      await handleCopyToClipboard(command.target);
+      break;
+    case 'TAKE_SCREENSHOT':
+      await handleTakeScreenshot();
+      break;
+    case 'SCROLL_PAGE':
+      await handleScroll(command.direction);
+      break;
+    case 'HIGHLIGHT_KEYWORD':
+      await handleHighlight(command.keyword);
+      break;
+    case 'SET_TIMER':
+      await handleSetTimer(command.minutes, command.label);
+      break;
+    case 'SET_REMINDER':
+      await handleSetReminder(command.minutes, command.message);
+      break;
     case 'STOP':
       stopCurrentWork();
       break;
@@ -398,10 +467,428 @@ async function apiFetch<T>(url: string, body: unknown): Promise<T> {
 function stopCurrentWork() {
   stopCurrentFetchOnly();
   stopSpeaking();
-  broadcastPanelUpdate({ status: 'Stopped', listening });
+  readAloudState.active = false;
+  readAloudState.isPaused = false;
+  broadcastPanelUpdate({ status: 'Stopped', listening, readAloudStatus: 'stopped' });
 }
 
 function stopCurrentFetchOnly() {
   activeController?.abort();
   activeController = undefined;
 }
+
+// --- STATEFUL READ ALOUD ENGINE ---
+interface ReadAloudState {
+  paragraphs: string[];
+  currentIndex: number;
+  isPaused: boolean;
+  active: boolean;
+}
+
+let readAloudState: ReadAloudState = {
+  paragraphs: [],
+  currentIndex: 0,
+  isPaused: false,
+  active: false
+};
+
+function speakParagraph(index: number) {
+  if (!readAloudState.active || readAloudState.isPaused) return;
+
+  if (index >= readAloudState.paragraphs.length) {
+    readAloudState.active = false;
+    readAloudState.isPaused = false;
+    readAloudState.currentIndex = 0;
+    broadcastPanelUpdate({ status: 'Finished reading page aloud.', readAloudStatus: 'stopped' });
+    speak('Finished reading page.');
+    return;
+  }
+
+  const paragraph = readAloudState.paragraphs[index];
+  broadcastPanelUpdate({
+    status: `Reading aloud (${index + 1}/${readAloudState.paragraphs.length})`,
+    readAloudStatus: 'playing'
+  });
+
+  chrome.tts.stop();
+  chrome.tts.speak(paragraph, {
+    rate: 1,
+    enqueue: false,
+    onEvent: (event) => {
+      if (event.type === 'end') {
+        if (readAloudState.active && !readAloudState.isPaused) {
+          readAloudState.currentIndex++;
+          speakParagraph(readAloudState.currentIndex);
+        }
+      }
+    }
+  });
+}
+
+async function handleReadPageAloud() {
+  const tab = await getActiveTab();
+  if (!tab?.id) {
+    broadcastPanelUpdate({ status: 'No active tab found.' });
+    return;
+  }
+
+  broadcastPanelUpdate({ status: 'Extracting text for reading aloud...' });
+  const content = await extractContent(tab.id);
+
+  const paragraphs = content.text
+    .split(/(?:\r?\n){2,}|\.\s+/)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 15);
+
+  if (paragraphs.length === 0) {
+    broadcastPanelUpdate({ status: 'No readable text found on page.' });
+    speak('No readable text found on page.');
+    return;
+  }
+
+  readAloudState = {
+    paragraphs,
+    currentIndex: 0,
+    isPaused: false,
+    active: true
+  };
+
+  speakParagraph(0);
+}
+
+function handleTTSControl(action: 'pause' | 'continue' | 'start' | 'stop') {
+  if (action === 'pause') {
+    readAloudState.isPaused = true;
+    chrome.tts.stop();
+    broadcastPanelUpdate({ status: 'Paused reading aloud.', readAloudStatus: 'paused' });
+    speak('Paused reading.');
+  } else if (action === 'continue') {
+    if (readAloudState.paragraphs.length === 0) {
+      speak('Nothing to continue. Say read page aloud first.');
+      return;
+    }
+    readAloudState.isPaused = false;
+    readAloudState.active = true;
+    speakParagraph(readAloudState.currentIndex);
+    broadcastPanelUpdate({ status: `Resumed reading aloud (${readAloudState.currentIndex + 1}/${readAloudState.paragraphs.length}).`, readAloudStatus: 'playing' });
+  } else if (action === 'start') {
+    if (readAloudState.paragraphs.length === 0) {
+      speak('Nothing to start. Say read page aloud first.');
+      return;
+    }
+    readAloudState.currentIndex = 0;
+    readAloudState.isPaused = false;
+    readAloudState.active = true;
+    speakParagraph(0);
+    broadcastPanelUpdate({ status: 'Started reading from beginning.', readAloudStatus: 'playing' });
+  } else if (action === 'stop') {
+    readAloudState.active = false;
+    readAloudState.isPaused = false;
+    chrome.tts.stop();
+    broadcastPanelUpdate({ status: 'Stopped speech.', readAloudStatus: 'stopped' });
+  }
+}
+
+// --- TAB MANAGEMENT HANDLERS ---
+async function findTabByTarget(target?: string) {
+  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (!target || target === 'this' || target === 'current' || target === 'tab') {
+    return activeTab;
+  }
+  const tabs = await chrome.tabs.query({ currentWindow: true });
+  const lowerTarget = target.toLowerCase();
+  const matched = tabs.find(
+    (t) =>
+      t.title?.toLowerCase().includes(lowerTarget) ||
+      t.url?.toLowerCase().includes(lowerTarget)
+  );
+  return matched || activeTab;
+}
+async function closeActiveTab() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tab?.id) {
+    await chrome.tabs.remove(tab.id);
+    broadcastPanelUpdate({ status: `Closed tab: ${tab.title || 'active tab'}` });
+    speak('Closed tab.');
+  }
+}
+
+async function switchToTab(tabIndex: number) {
+  const tabs = await chrome.tabs.query({ currentWindow: true });
+  if (tabs.length === 0) return;
+
+  const targetIndex = tabIndex - 1;
+  const targetTab = tabs[targetIndex];
+
+  if (targetTab?.id) {
+    await chrome.tabs.update(targetTab.id, { active: true });
+    broadcastPanelUpdate({ status: `Switched to tab ${tabIndex}: ${targetTab.title || ''}` });
+    speak(`Switched to tab ${tabIndex}.`);
+  } else {
+    broadcastPanelUpdate({ status: `Tab ${tabIndex} does not exist (${tabs.length} tabs open).` });
+    speak(`Only ${tabs.length} tabs open.`);
+  }
+}
+
+async function switchToTabTitle(target: string) {
+  const tab = await findTabByTarget(target);
+  if (tab?.id) {
+    await chrome.tabs.update(tab.id, { active: true });
+    broadcastPanelUpdate({ status: `Switched to ${tab.title || target}` });
+    speak(`Switched to ${tab.title || target}.`);
+  } else {
+    broadcastPanelUpdate({ status: `Could not find tab matching "${target}".` });
+    speak('Tab not found.');
+  }
+}
+
+async function navigateTabDir(direction: 'next' | 'prev') {
+  const tabs = await chrome.tabs.query({ currentWindow: true });
+  if (tabs.length < 2) return;
+
+  const activeIndex = tabs.findIndex((t) => t.active);
+  let nextIndex = direction === 'next' ? activeIndex + 1 : activeIndex - 1;
+
+  if (nextIndex >= tabs.length) nextIndex = 0;
+  if (nextIndex < 0) nextIndex = tabs.length - 1;
+
+  const targetTab = tabs[nextIndex];
+  if (targetTab?.id) {
+    await chrome.tabs.update(targetTab.id, { active: true });
+    broadcastPanelUpdate({ status: `Switched to ${targetTab.title || 'tab'}` });
+  }
+}
+async function closeOtherTabs() {
+  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tabs = await chrome.tabs.query({ currentWindow: true });
+  const tabsToRemove = tabs.filter((t) => t.id && t.id !== activeTab?.id).map((t) => t.id!);
+  if (tabsToRemove.length > 0) {
+    await chrome.tabs.remove(tabsToRemove);
+    broadcastPanelUpdate({ status: `Closed ${tabsToRemove.length} other tabs.` });
+    speak(`Closed ${tabsToRemove.length} other tabs.`);
+  } else {
+    broadcastPanelUpdate({ status: 'No other tabs to close.' });
+  }
+}
+
+async function closeDuplicateTabs() {
+  const tabs = await chrome.tabs.query({ currentWindow: true });
+  const seen = new Set<string>();
+  const duplicates: number[] = [];
+  for (const tab of tabs) {
+    if (tab.url && tab.id) {
+      if (seen.has(tab.url)) {
+        duplicates.push(tab.id);
+      } else {
+        seen.add(tab.url);
+      }
+    }
+  }
+  if (duplicates.length > 0) {
+    await chrome.tabs.remove(duplicates);
+    broadcastPanelUpdate({ status: `Closed ${duplicates.length} duplicate tabs.` });
+    speak(`Closed ${duplicates.length} duplicate tabs.`);
+  } else {
+    broadcastPanelUpdate({ status: 'No duplicate tabs found.' });
+    speak('No duplicate tabs found.');
+  }
+}
+
+async function muteOtherTabs() {
+  const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tabs = await chrome.tabs.query({ currentWindow: true });
+  for (const tab of tabs) {
+    if (tab.id && tab.id !== activeTab?.id) {
+      await chrome.tabs.update(tab.id, { muted: true });
+    }
+  }
+  broadcastPanelUpdate({ status: 'Muted all other tabs.' });
+  speak('Muted other tabs.');
+}
+
+async function setTabMuted(target?: string, muted: boolean = true) {
+  const tab = await findTabByTarget(target);
+  if (tab?.id) {
+    await chrome.tabs.update(tab.id, { muted });
+    const label = tab.title || target || 'tab';
+    broadcastPanelUpdate({ status: `${muted ? 'Muted' : 'Unmuted'} ${label}` });
+    speak(`${muted ? 'Muted' : 'Unmuted'} tab.`);
+  }
+}
+
+async function setTabPinned(target?: string, pinned: boolean = true) {
+  const tab = await findTabByTarget(target);
+  if (tab?.id) {
+    await chrome.tabs.update(tab.id, { pinned });
+    const label = tab.title || target || 'tab';
+    broadcastPanelUpdate({ status: `${pinned ? 'Pinned' : 'Unpinned'} ${label}` });
+    speak(`${pinned ? 'Pinned' : 'Unpinned'} tab.`);
+  }
+}
+
+async function reopenClosedTab() {
+  await chrome.sessions.restore();
+  broadcastPanelUpdate({ status: 'Reopened last closed tab.' });
+  speak('Reopened closed tab.');
+}
+
+async function groupTabsByDomain() {
+  const tabs = await chrome.tabs.query({ currentWindow: true });
+  const domainMap: Record<string, number[]> = {};
+  for (const tab of tabs) {
+    if (tab.url && tab.id && !tab.url.startsWith('chrome://') && !tab.url.startsWith('chrome-extension://')) {
+      try {
+        const hostname = new URL(tab.url).hostname.replace(/^www\./, '');
+        if (!domainMap[hostname]) domainMap[hostname] = [];
+        domainMap[hostname].push(tab.id);
+      } catch {}
+    }
+  }
+  let count = 0;
+  for (const [domain, tabIds] of Object.entries(domainMap)) {
+    if (tabIds.length > 1) {
+      const groupId = await chrome.tabs.group({ tabIds });
+      await chrome.tabGroups.update(groupId, { title: domain });
+      count++;
+    }
+  }
+  broadcastPanelUpdate({ status: `Grouped tabs into ${count} domain groups.` });
+  speak(`Grouped tabs into domain groups.`);
+}
+
+// --- MEDIA CONTROL HANDLER ---
+async function handleMediaControl(action: 'play' | 'pause' | 'stop' | 'mute' | 'unmute' | 'speed', rate?: number) {
+  const tab = await getActiveTab();
+  if (!tab?.id) return;
+
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (act: string, r?: number) => {
+      const media = Array.from(document.querySelectorAll<HTMLMediaElement>('video, audio'));
+      if (media.length === 0) return false;
+      media.forEach((el) => {
+        if (act === 'play') void el.play();
+        else if (act === 'pause' || act === 'stop') el.pause();
+        else if (act === 'mute') el.muted = true;
+        else if (act === 'unmute') el.muted = false;
+        else if (act === 'speed' && r) el.playbackRate = r;
+      });
+      return true;
+    },
+    args: [action, rate ?? 1.0]
+  });
+
+  const descriptions: Record<string, string> = {
+    play: 'Playing media',
+    pause: 'Paused media',
+    stop: 'Stopped media',
+    mute: 'Muted media',
+    unmute: 'Unmuted media',
+    speed: `Set playback speed to ${rate}x`
+  };
+  const desc = descriptions[action] || 'Updated media playback';
+  broadcastPanelUpdate({ status: desc });
+  speak(desc);
+}
+
+// --- READER MODE HANDLER ---
+async function handleToggleReaderMode() {
+  const tab = await getActiveTab();
+  if (!tab?.id) return;
+
+  const content = await extractContent(tab.id);
+  broadcastPanelUpdate({
+    status: 'Clean Reader View Active',
+    readerModeActive: true,
+    readerContent: content
+  });
+  speak('Entered clean reader mode.');
+}
+
+// --- QUICK CLIPBOARD & UTILITIES ---
+async function handleCopyToClipboard(target: 'url' | 'title') {
+  const tab = await getActiveTab();
+  if (!tab?.id) return;
+  const text = target === 'url' ? tab.url || '' : tab.title || '';
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (val: string) => {
+      navigator.clipboard.writeText(val);
+    },
+    args: [text]
+  });
+  const label = target === 'url' ? 'URL' : 'Page Title';
+  broadcastPanelUpdate({ status: `Copied ${label} to clipboard!` });
+  speak(`Copied ${label}.`);
+}
+
+async function handleTakeScreenshot() {
+  const dataUrl = await chrome.tabs.captureVisibleTab();
+  const filename = `UrPilot-Screenshot-${Date.now()}.png`;
+  await chrome.downloads.download({ url: dataUrl, filename });
+  broadcastPanelUpdate({ status: 'Screenshot saved to Downloads folder!' });
+  speak('Screenshot captured.');
+}
+
+async function handleScroll(direction: 'up' | 'down' | 'top' | 'bottom') {
+  const tab = await getActiveTab();
+  if (!tab?.id) return;
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (dir: string) => {
+      if (dir === 'down') window.scrollBy({ top: window.innerHeight * 0.75, behavior: 'smooth' });
+      else if (dir === 'up') window.scrollBy({ top: -window.innerHeight * 0.75, behavior: 'smooth' });
+      else if (dir === 'top') window.scrollTo({ top: 0, behavior: 'smooth' });
+      else if (dir === 'bottom') window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    },
+    args: [direction]
+  });
+  broadcastPanelUpdate({ status: `Scrolled ${direction}.` });
+}
+
+async function handleHighlight(keyword: string) {
+  const tab = await getActiveTab();
+  if (!tab?.id) return;
+  await chrome.scripting.executeScript({
+    target: { tabId: tab.id },
+    func: (kw: string) => {
+      (window as any).find(kw, false, false, true, false, false, true);
+    },
+    args: [keyword]
+  });
+  broadcastPanelUpdate({ status: `Highlighted "${keyword}" on page.` });
+  speak(`Highlighted ${keyword}.`);
+}
+
+// --- TIMERS & ALARMS ---
+async function handleSetTimer(minutes: number, label?: string) {
+  const name = `timer_${Date.now()}_${label || 'Timer'}`;
+  await chrome.alarms.create(name, { delayInMinutes: minutes });
+  broadcastPanelUpdate({ status: `Timer set for ${minutes} min.` });
+  speak(`Timer set for ${minutes} minute${minutes > 1 ? 's' : ''}.`);
+}
+
+async function handleSetReminder(minutes: number, message: string) {
+  const name = `timer_${Date.now()}_${message}`;
+  await chrome.alarms.create(name, { delayInMinutes: minutes });
+  broadcastPanelUpdate({ status: `Reminder set for ${minutes} min: "${message}"` });
+  speak(`Reminder set for ${minutes} minutes.`);
+}
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name.startsWith('timer_')) {
+    const parts = alarm.name.split('_');
+    const label = parts.slice(2).join('_') || 'Timer';
+    try {
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: chrome.runtime.getURL('src/assets/icon.png'),
+        title: 'UrPilot Reminder',
+        message: `⏰ Alert: ${label}`,
+        priority: 2
+      });
+    } catch {}
+    speak(`UrPilot Alert: ${label}`);
+    broadcastPanelUpdate({ status: `⏰ Alarm finished: ${label}` });
+  }
+});

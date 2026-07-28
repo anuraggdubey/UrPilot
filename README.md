@@ -14,6 +14,19 @@
 
 ---
 
+## ⚡ Quick Start & Keyboard Shortcuts
+
+Once loaded into Chrome, trigger UrPilot hands-free from any tab:
+
+| Action | Windows / Linux | macOS | Description |
+| :--- | :---: | :---: | :--- |
+| 🎛️ **Open Extension** | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Y</kbd> | <kbd>Cmd</kbd> + <kbd>Shift</kbd> + <kbd>Y</kbd> | Opens the UrPilot Side Panel UI |
+| 🎙️ **Toggle Voice Listening** | <kbd>Ctrl</kbd> + <kbd>U</kbd> | <kbd>Cmd</kbd> + <kbd>U</kbd> | **Press once to start listening / Press again to turn off** |
+
+> 💡 *Pro Tip: Rebind these shortcuts anytime in Chrome by visiting `chrome://extensions/shortcuts`.*
+
+---
+
 ## 🌟 Why UrPilot?
 
 Browsing the web while multitasking, taking notes, or researching can be tedious. **UrPilot** transforms your browser into an intelligent, voice-driven assistant that executes complex web tasks through natural speech.
@@ -29,7 +42,7 @@ Browsing the web while multitasking, taking notes, or researching can be tedious
 
 ## ✨ Key Features
 
-- 🎙️ **Always-On / Push-to-Talk Voice Engine**: Continuous speech recognition operating reliably inside an isolated Chrome **Offscreen Document** using Web Speech API.
+- 🎙️ **Always-On / Push-to-Talk Voice Engine**: Continuous speech recognition operating reliably inside an isolated Chrome **Offscreen Document** using Web Speech API (<kbd>Ctrl+U</kbd> to toggle).
 - 🔍 **Smart Voice Search & Auto-Navigation**: Say *"Search how to deploy a smart contract on Stellar"* — UrPilot queries Tavily AI search and navigates automatically to the top relevant result.
 - 📑 **One-Click & Voice Page Summarization**: Extracts main readable content using `@mozilla/readability` and generates concise, step-by-step summaries via Groq LLMs.
 - 🔊 **Voice Answers (Text-to-Speech)**: Integrated native `chrome.tts` reads summaries and answers aloud with customizable speed and pitch.
@@ -85,7 +98,7 @@ Browsing the web while multitasking, taking notes, or researching can be tedious
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start & Installation
 
 ### Prerequisites
 - **Node.js**: `>= 22.0.0`
@@ -141,6 +154,7 @@ npm run dev:extension
 2. Open Chrome and go to `chrome://extensions`.
 3. Enable **Developer mode** (top right toggle).
 4. Click **Load unpacked** and select the `extension/dist` directory.
+5. Use <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Y</kbd> to open the panel, or <kbd>Ctrl</kbd> + <kbd>U</kbd> to toggle voice listening!
 
 ---
 
@@ -172,7 +186,7 @@ UrPilot/
 │   │   ├── offscreen/     # Background Web Speech recognition runner
 │   │   ├── sidepanel/     # Main Voice Assistant React UI
 │   │   └── shared/        # Message types, schemas, and helpers
-│   ├── manifest.config.ts # Dynamic Chrome Manifest V3 configuration
+│   ├── manifest.config.ts # Dynamic Chrome Manifest V3 configuration (Keybindings: Ctrl+Shift+Y, Ctrl+U)
 │   └── vite.config.ts
 ├── backend/               # Next.js 15 API Backend (Serverless deployment)
 │   ├── src/app/api/       # /search & /summarize endpoints

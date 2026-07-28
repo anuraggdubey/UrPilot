@@ -54,8 +54,8 @@ export default defineManifest({
     },
     'toggle-listening': {
       suggested_key: {
-        default: 'Ctrl+Shift+L',
-        mac: 'Command+Shift+L'
+        default: 'Ctrl+U',
+        mac: 'Command+U'
       },
       description: 'Toggle UrPilot voice listening'
     }

@@ -6,6 +6,11 @@ export default defineManifest({
   version: '0.1.0',
   description: 'Hands-free voice assistant for browsing, tabs, and research.',
   action: {},
+  icons: {
+    16: 'icon128.png',
+    48: 'icon128.png',
+    128: 'icon128.png'
+  },
   side_panel: {
     default_path: 'src/sidepanel/sidepanel.html'
   },

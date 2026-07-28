@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [react(), crx({ manifest })],
   build: {
     emptyOutDir: true,
-    sourcemap: true,
+    sourcemap: false,
     rollupOptions: {
       input: {
         sidepanel: 'src/sidepanel/sidepanel.html',

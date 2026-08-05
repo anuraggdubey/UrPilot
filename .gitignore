@@ -95,6 +95,9 @@ extension/*.crx
 # Large / Generated Files
 # ========================
 UrPilot Doc.pdf
+urpilot-stt-fix-documentation.md
+urpilot-technical-documentation.md
+urpilot-ui-ux-documentation.md
 
 # ========================
 # Vercel

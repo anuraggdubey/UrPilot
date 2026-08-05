@@ -165,7 +165,7 @@ export default function UrPilotWebLanding() {
           <div className="flex-1 flex flex-col justify-between">
             {/* TOP SHIPPING BAR */}
             <div className="bg-[#17160F] py-2.5 px-6 text-center text-xs sm:text-sm font-semibold text-[#F5F0E6]">
-              Now shipping — hands-free browsing, free forever on Chrome Web Store.
+              Now shipping — hands-free browsing, free forever on Chrome Web Store & Microsoft Edge Add-ons.
             </div>
 
             {/* HERO CONTENT CONTAINER */}
@@ -246,7 +246,7 @@ export default function UrPilotWebLanding() {
                   {/* Sticker Overlay */}
                   <div className="inline-block border border-[#17160F] bg-white p-2.5 rotate-2">
                     <div className="font-mono text-[10px] font-extrabold uppercase text-[#17160F]/70">URPILOT</div>
-                    <div className="font-sans text-xs sm:text-sm font-extrabold uppercase text-[#17160F]">ON CHROME WEB STORE</div>
+                    <div className="font-sans text-xs sm:text-sm font-extrabold uppercase text-[#17160F]">ON CHROME & EDGE STORES</div>
                     <div className="font-serif italic text-xs sm:text-sm text-red-600">just shipped!</div>
                   </div>
 
@@ -278,16 +278,27 @@ export default function UrPilotWebLanding() {
                   <div className="h-[1px] w-32 bg-[#17160F]/30" />
                 </div>
 
-                {/* Right: Black CTA Pill Button */}
-                <a
-                  href="https://chrome.google.com/webstore"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full border border-[#17160F] bg-[#17160F] px-7 py-3.5 text-xs sm:text-sm font-bold text-[#F5F0E6] hover:bg-[#EFB92E] hover:text-[#17160F] transition-all"
-                >
-                  <span>Add to Chrome — Free</span>
-                  <span>↗</span>
-                </a>
+                {/* Right: CTA Pill Buttons */}
+                <div className="flex flex-wrap items-center gap-3">
+                  <a
+                    href="https://chrome.google.com/webstore"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 rounded-full border border-[#17160F] bg-[#17160F] px-7 py-3.5 text-xs sm:text-sm font-bold text-[#F5F0E6] hover:bg-[#EFB92E] hover:text-[#17160F] transition-all"
+                  >
+                    <span>Add to Chrome — Free</span>
+                    <span>↗</span>
+                  </a>
+                  <a
+                    href="https://microsoftedge.microsoft.com/addons/detail/urpilot/dckoojfpocofcagpgeppkkmgbkjielaa"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 rounded-full border border-[#17160F] bg-white px-7 py-3.5 text-xs sm:text-sm font-bold text-[#17160F] hover:bg-[#EFB92E] transition-all"
+                  >
+                    <span>Add to Edge — Free</span>
+                    <span>↗</span>
+                  </a>
+                </div>
               </div>
             </main>
           </div>
@@ -301,11 +312,13 @@ export default function UrPilotWebLanding() {
             <span className="mx-6">• HANDS-FREE BROWSING</span>
             <span className="mx-6">• VOICE-CONTROLLED TABS</span>
             <span className="mx-6">• OPEN SOURCE</span>
+            <span className="mx-6">• NOW ON MICROSOFT EDGE</span>
             <span className="mx-6">• FREE TIER</span>
             <span className="mx-6">• BUILT FOR DEVELOPERS</span>
             <span className="mx-6">• HANDS-FREE BROWSING</span>
             <span className="mx-6">• VOICE-CONTROLLED TABS</span>
             <span className="mx-6">• OPEN SOURCE</span>
+            <span className="mx-6">• NOW ON MICROSOFT EDGE</span>
           </div>
         </div>
 
@@ -537,15 +550,26 @@ export default function UrPilotWebLanding() {
                 <div className="font-serif italic text-xs text-red-600">new & live!</div>
               </div>
 
-              <a
-                href="https://chrome.google.com/webstore"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 rounded-full bg-[#EFB92E] px-7 py-3.5 text-xs sm:text-sm font-extrabold uppercase text-[#17160F] hover:bg-white transition-colors"
-              >
-                <span>Add to Chrome — Free</span>
-                <span>↗</span>
-              </a>
+              <div className="flex flex-col gap-3">
+                <a
+                  href="https://chrome.google.com/webstore"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full bg-[#EFB92E] px-7 py-3.5 text-xs sm:text-sm font-extrabold uppercase text-[#17160F] hover:bg-white transition-colors"
+                >
+                  <span>Add to Chrome — Free</span>
+                  <span>↗</span>
+                </a>
+                <a
+                  href="https://microsoftedge.microsoft.com/addons/detail/urpilot/dckoojfpocofcagpgeppkkmgbkjielaa"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full bg-white px-7 py-3.5 text-xs sm:text-sm font-extrabold uppercase text-[#17160F] hover:bg-[#EFB92E] transition-colors"
+                >
+                  <span>Add to Edge — Free</span>
+                  <span>↗</span>
+                </a>
+              </div>
             </div>
           </div>
         </section>
@@ -588,7 +612,7 @@ export default function UrPilotWebLanding() {
                       <div className="font-serif italic text-xs text-[#F5D590]">Come try it with us</div>
                       <div className="font-sans text-sm font-bold text-white mt-1">Available Now</div>
                       <div className="text-[10px] text-white/80 mt-1 leading-snug">
-                        Chrome Web Store<br />1-click install · Free
+                        Chrome & Edge Stores<br />1-click install · Free
                       </div>
                     </div>
                     <div className="h-7 w-7 rounded-full border border-white/40 flex items-center justify-center text-xs text-white">
@@ -630,23 +654,28 @@ export default function UrPilotWebLanding() {
             <div className="lg:col-span-8 divide-y divide-[#17160F]/20">
               {[
                 { label: 'DOCS', href: '/docs' },
+                { label: 'EDGE ADD-ONS', href: 'https://microsoftedge.microsoft.com/addons/detail/urpilot/dckoojfpocofcagpgeppkkmgbkjielaa' },
                 { label: 'GITHUB', href: 'https://github.com' },
                 { label: 'CHANGELOG', href: '/docs' },
                 { label: 'PRIVACY', href: '/docs' },
                 { label: 'SUPPORT', href: '/docs' },
                 { label: 'ROADMAP', href: '/docs' },
-              ].map((link, idx) => (
-                <Link
-                  key={idx}
-                  href={link.href}
-                  className="py-4 flex items-center justify-between font-mono text-sm sm:text-base font-extrabold tracking-wider uppercase hover:pl-2 transition-all"
-                >
-                  <span>{link.label}</span>
-                  <span className="h-7 w-7 rounded-full border border-[#17160F] flex items-center justify-center text-xs">
-                    ↗
-                  </span>
-                </Link>
-              ))}
+              ].map((link, idx) => {
+                const isExternal = link.href.startsWith('http');
+                return (
+                  <Link
+                    key={idx}
+                    href={link.href}
+                    {...(isExternal ? { target: '_blank', rel: 'noreferrer' } : {})}
+                    className="py-4 flex items-center justify-between font-mono text-sm sm:text-base font-extrabold tracking-wider uppercase hover:pl-2 transition-all"
+                  >
+                    <span>{link.label}</span>
+                    <span className="h-7 w-7 rounded-full border border-[#17160F] flex items-center justify-center text-xs">
+                      ↗
+                    </span>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </section>

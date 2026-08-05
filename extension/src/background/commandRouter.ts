@@ -67,7 +67,7 @@ export function parseCommand(transcript: string, templates: SiteTemplate[]): Com
 
   // Suggest Reply / Tweet
   if (
-    /^(?:suggest|generate|give me|what should i|what to)\s+(?:a\s+|some\s+)?(?:reply|tweet|comment)(?: for this| to this| under this| under post)?$/i.test(lower) ||
+    /^(?:suggest|generate|give me|what should i|what to)\s+(?:a\s+|some\s+)?(?:reply|tweet|comment)(?: for this| to this| under this(?: post)?| under (?:this )?post)?$/i.test(lower) ||
     /^(?:suggest reply|suggest tweet|suggest comment|what should i tweet|what should i reply|reply suggestion|tweet suggestion|comment suggestion|how to reply|what to comment|reply to this)$/i.test(lower)
   ) {
     return { intent: 'SUGGEST_REPLY' };

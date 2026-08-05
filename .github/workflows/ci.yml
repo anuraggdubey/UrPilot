@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────────
+  # Typecheck — both workspaces in parallel
+  # ─────────────────────────────────────────────
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace: [extension, backend]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck ${{ matrix.workspace }}
+        run: npm run typecheck --workspace ${{ matrix.workspace }}
+
+  # ─────────────────────────────────────────────
+  # Test — run test suites
+  # ─────────────────────────────────────────────
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: typecheck
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace: [extension, backend]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test ${{ matrix.workspace }}
+        run: npm run test --workspace ${{ matrix.workspace }}
+
+  # ─────────────────────────────────────────────
+  # Build — verify production builds succeed
+  # ─────────────────────────────────────────────
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace: [extension, backend]
+    env:
+      # Dummy env vars so Next.js build doesn't fail on missing secrets
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY || 'sk-dummy-ci-key' }}
+      TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY || 'tvly-dummy-ci-key' }}
+      ALLOWED_EXTENSION_ORIGIN: chrome-extension://test
+      VITE_BACKEND_BASE_URL: https://urpilot.vercel.app
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build ${{ matrix.workspace }}
+        run: npm run build --workspace ${{ matrix.workspace }}
+
+      - name: Upload extension artifact
+        if: matrix.workspace == 'extension'
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-dist
+          path: extension/dist/
+          retention-days: 14
